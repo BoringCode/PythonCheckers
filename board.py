@@ -1,4 +1,4 @@
-def checkers(size) :
+def draw(size) :
     import cTurtle
     board = cTurtle.Turtle()
     #instant draw
@@ -42,6 +42,3 @@ def checkers(size) :
             state = 0
     #show the changes
     board.tracer(1, 1)
-        
-#run function
-checkers(60)
