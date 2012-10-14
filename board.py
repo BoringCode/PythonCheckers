@@ -40,5 +40,42 @@ def draw(size) :
             board.forward(size * 2)
             board.right(90)
             state = 0
+    #draw the pieces
+    board.goto(-halfS, -halfS)
+    board.left(90)
+    board.forward(size)
+    board.right(90)
+    board.forward(size / 2)
+    for i in range(12) :
+        #set the color of the circle
+        board.color("white")
+        board.fillcolor("red")
+        radius = size // 2
+        board.down()
+        #fill in the circle with the color
+        board.begin_fill()
+        circ = 2*3.14159*radius
+        Len = circ / radius
+        turnAngle = 360 / radius
+        #start looping around the circle
+        for r in range(radius) :
+            board.forward(Len)
+            board.right(turnAngle)
+        board.end_fill()
+        board.up()
+        if (i == 3) :
+            board.forward(size)
+            board.left(180)
+        elif (i == 7) :
+            board.forward(size)
+            board.right(90)
+            board.forward(size * 2)
+            board.right(90)
+        else :
+            board.forward(size * 2)
+
     #show the changes
     board.tracer(1, 1)
+
+size = 60
+draw(size)
