@@ -46,7 +46,6 @@ def draw(size) :
     board.forward(size)
     board.right(90)
     board.forward(size / 2)
-    color = "red"
     for i in range(2) :
         for i in range(12) :
             #set the color of the circle
@@ -76,7 +75,7 @@ def draw(size) :
             else :
                 board.forward(size * 2)
         #getting fancy
-        color = "black"
+        color = "red"
         #this positions the turtle at the bottom of the top right red square
         board.goto(halfS - (size / 2), halfS - size)
         #this will cause the turtle to draw in reverse
