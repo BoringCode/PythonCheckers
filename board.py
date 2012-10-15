@@ -13,7 +13,7 @@ def draw(size) :
     board.forward(size)
     board.right(90)
     #set some control variables
-    color = "black"
+    color = "red"
     state = 0
     #loop through rows
     for i in range(8) :
@@ -46,6 +46,7 @@ def draw(size) :
     board.forward(size)
     board.right(90)
     board.forward(size / 2)
+    color = "black"
     for i in range(2) :
         for i in range(12) :
             #set the color of the circle
