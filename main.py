@@ -97,12 +97,17 @@ def moveChecker(t, size, fromRow,fromCol,toRow,toCol) :
     toX = getCoordX(toCol, size)
     toY = getCoordY(toRow, size)
     #actual color will be calculated eventually
-    drawPiece(t, toX, toY, size, "red")
+    drawPiece(t, toX, toY, size, "#C40003")
     
 def checkers(t, size):
     drawCheckerBoard(t,-4*size,4*size,size)
 
 checkers(t, size)
-#moveChecker(t, size, "A", 1, "D", 2)
-
 t.tracer(True)
+
+#The actual machine problem
+#Row = letter (A - H)
+#Col = number (1 - 8)
+moveChecker(t, size, "A", 2, "E", 2)
+moveChecker(t, size, "H", 1, "D", 3)
+moveChecker(t, size, "G", 8, "D", 7)
