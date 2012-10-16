@@ -1,11 +1,26 @@
 import cTurtle
-import math
-import random
+t = cTurtle.Turtle()
+t.ht()
+t.up()
+t.tracer(False)
 
+size = 60
+
+def getCoordY(c, size) :
+    topY = 4*size
+    if (ord(c) >= 65 and ord(c) <= 72) :
+        return topY - ((abs(65 - ord(c))) * size)
+    else :
+        return False
+def getCoordX(c, size) :
+    topX = -4*size
+    if (c >= 1 and c <= 8) :
+        return topX + ((c - 1) * size)
+    else :
+        return False      
 def drawSquare(t,x,y,size,color):
     t.up()
     t.goto(x,y)
-    t.down()
     t.setheading(0)
     t.color(color)
     t.begin_fill()
@@ -13,53 +28,70 @@ def drawSquare(t,x,y,size,color):
         t.forward(size)
         t.right(90)
     t.end_fill()
-
-def drawBlackRedRow(t,x,y,size):
+def drawPiece(t, x, y, size, color) :
+    radius = size / 2.5
+    t.up()
+    t.goto(x + (0.5*size), y - (0.12 * size))
+    t.setheading(0)
+    t.down()
+    t.color(color)
+    t.begin_fill()
+    pos = t.position()
+    circumference= 2 * 3.14159 * radius
+    Len=circumference / 360
+    turnAngle= 1
+    for i in range(360):
+        t.forward(Len)
+        t.right(turnAngle)
+    t.end_fill()
+def drawDarkLightRow(t,x,y,size):
     for i in range(4):
         drawSquare(t,x,y,size,"black")
         x=x+size
         drawSquare(t,x,y,size,"#009900")
         x=x+size
-
-def drawRedBlackRow(t,x,y,size):
+def drawLightDarkRow(t,x,y,size):
     for i in range(4):
         drawSquare(t,x,y,size,"#009900")
         x=x+size
         drawSquare(t,x,y,size,"black")
         x=x+size
-
 def drawCheckerBoard(t,x,y,size):
     for i in range(4):
-        drawRedBlackRow(t,x,y,size)
-        y=y-size
-        drawBlackRedRow(t,x,y,size)
-        y=y-size
+        drawLightDarkRow(t,x,y,size)
+        y = y-size
+        drawDarkLightRow(t,x,y,size)
+        y = y-size
+    #draw the pieces on init
+    y = 4*size
+    x = -3*size
+    t.goto(x, y)
+    color = "white"
+    for side in range(2) :
+        for i in range(4) :
+            for r in range(4) :
+                drawPiece(t, x, y, size, color)
+                x = x + (size * 2)
+            print(y)
+            y = y - size
+        color = "red"
 
-##def fillCheckerBoard(t,size,CB):
-##    t.tracer(False)  
-##    drawCheckerBoard(t,-4*size,4*size,size)
-##    labelBoard(t,size)
-##    for row in range(8):
-##        for col in range(8):
-##            if CB[row][col]!=0:
-##                if CB[row][col] in [1,2]:
-##                    color="red"
-##                    player="red"
-##                else:
-##                    color="gray"
-##                    player="black"
-##                king=False
-##                if CB[row][col] in [2,4]:
-##                    king=True
-##                drawChecker(t,row,col,color,size,king)
-##    t.tracer(True)
-
-
-
-def checkers(size):
-    t=cTurtle.Turtle()
-    t.tracer(False)  
+def moveChecker(t, size, fromRow,fromCol,toRow,toCol) :
+    fromX = getCoordX(fromCol, size)
+    fromY = getCoordY(fromRow, size)
+    if (fromX % 2 == 0 and fromY % 2 != 0) :
+        color = "black"
+    else :
+        color = "#009900"
+    drawSquare(t, fromX, fromY, size, color)
+    toX = getCoordX(toCol, size)
+    toY = getCoordY(toRow, size)
+    drawPiece(t, toX, toY, size, "red")
+    
+def checkers(t, size):
     drawCheckerBoard(t,-4*size,4*size,size)
-    t.tracer(True)
 
-checkers(60)
+checkers(t, size)
+#moveChecker(t, size, "A", 1, "D", 2)
+
+t.tracer(True)
