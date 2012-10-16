@@ -68,12 +68,15 @@ def drawCheckerBoard(t,x,y,size):
     t.goto(x, y)
     color = "white"
     for side in range(2) :
-        for i in range(4) :
+        for i in range(3) :
             for r in range(4) :
                 drawPiece(t, x, y, size, color)
                 x = x + (size * 2)
-            print(y)
             y = y - size
+            if (i % 2 == 0) :
+                x = -(4 + side)*size
+            else :
+                x = -(3 + side)*size
         color = "red"
         y = -size
         x = -4*size
