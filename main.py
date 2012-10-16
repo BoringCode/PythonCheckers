@@ -75,6 +75,8 @@ def drawCheckerBoard(t,x,y,size):
             print(y)
             y = y - size
         color = "red"
+        y = -size
+        x = -4*size
 
 def moveChecker(t, size, fromRow,fromCol,toRow,toCol) :
     fromX = getCoordX(fromCol, size)
