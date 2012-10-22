@@ -7,17 +7,17 @@ t.tracer(False)
 size = 60
 
 def getCoordY(c, size) :
+    c = str(c)
     topY = 4*size
     if (ord(c) >= 65 and ord(c) <= 72) :
         return topY - ((abs(65 - ord(c))) * size)
-    else :
-        return False
+    return False
 def getCoordX(c, size) :
+    c = int(c)
     topX = -4*size
     if (c >= 1 and c <= 8) :
         return topX + ((c - 1) * size)
-    else :
-        return False      
+    return False      
 def drawSquare(t,x,y,size,color):
     t.up()
     t.goto(x,y)
@@ -59,6 +59,25 @@ def drawLightDarkRow(t,x,y,size):
         x=x+size
         drawSquare(t,x,y,size,"#D18B47")
         x=x+size
+        
+def labelBoard(t,size):
+    t.up()
+    t.goto(-(3.6*size),(4.1*size))
+    t.down()
+    t.pencolor('#000000')
+    for i in range(1, 9):
+        t.write(str(i),font=("Arial",12,"bold"))
+        t.up()
+        t.forward(size)
+        t.down()
+    t.up()
+    t.goto(-(4.5*size),(3.4*size))
+    t.down()
+    for i in range(8):
+        t.write(chr(65+i),font=("Arial",12,"bold"))
+        t.up()
+        t.goto(-(4.5*size),((4*size)+(i*-size)-(1.7*size)))
+        t.down()
 def drawCheckerBoard(t,x,y,size):
     for i in range(4):
         drawLightDarkRow(t,x,y,size)
@@ -85,17 +104,18 @@ def drawCheckerBoard(t,x,y,size):
         y = -size
         x = -4*size
         state = 0
+    labelBoard(t, size)
 
-def moveChecker(t, size, fromRow,fromCol,toRow,toCol) :
-    fromX = getCoordX(fromCol, size)
-    fromY = getCoordY(fromRow, size)
+def moveChecker(t, move, size) :
+    fromY = getCoordY(move[0], size)
+    fromX = getCoordX(move[1], size)
     if (fromX % 2 == 0 and fromY % 2 != 0) :
         color = "#FFCE9E"
     else :
         color = "#D18B47"
     drawSquare(t, fromX, fromY, size, color)
-    toX = getCoordX(toCol, size)
-    toY = getCoordY(toRow, size)
+    toY = getCoordY(move[3], size)
+    toX = getCoordX(move[4], size)
     #actual color will be calculated eventually
     drawPiece(t, toX, toY, size, "#C40003")
     
@@ -103,11 +123,12 @@ def checkers(t, size):
     drawCheckerBoard(t,-4*size,4*size,size)
 
 checkers(t, size)
-t.tracer(True)
 
 #The actual machine problem
 #Row = letter (A - H)
 #Col = number (1 - 8)
-moveChecker(t, size, "A", 2, "E", 2)
-moveChecker(t, size, "H", 1, "D", 3)
-moveChecker(t, size, "G", 8, "D", 7)
+moveChecker(t, "A2:E2", size)
+moveChecker(t, "H1:D3", size)
+moveChecker(t, "G8:D7", size)
+
+t.tracer(True)
