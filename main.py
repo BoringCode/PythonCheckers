@@ -1,14 +1,16 @@
+#Graphical stuff
 import cTurtle
 t = cTurtle.Turtle()
 t.ht()
 t.up()
 
+#Game setup
 light = "white"
 dark = "#C40003"
+size = 60
 
 #The game tracker
 CB = []
-size = 60
 
 def getRow(c, coor = True) :
     c = str(c)
@@ -58,24 +60,20 @@ def drawPiece(t, x, y, size, color) :
     t.color("#200000")
     t.fillcolor(color)
     t.begin_fill()
-    pos = t.position()
     circumference= 2 * 3.14159 * radius
-    Len=circumference / 360
-    turnAngle= 1
+    Len = circumference / 360
     for i in range(360):
         t.forward(Len)
-        t.right(turnAngle)
+        t.right(1)
     t.end_fill()
     t.width(1)
 def drawDarkLightRow(t,x,y,size) :
-    t.tracer(False)
     for i in range(4):
         drawSquare(t,x,y,size,"#D18B47")
         x=x+size
         drawSquare(t,x,y,size,"#FFCE9E")
         x=x+size
 def drawLightDarkRow(t,x,y,size) :
-    t.tracer(False)
     for i in range(4):
         drawSquare(t,x,y,size,"#FFCE9E")
         x=x+size
@@ -86,23 +84,15 @@ def labelBoard(t, size) :
     t.tracer(False)
     t.up()
     t.goto(-(3.6*size),(4.1*size))
-    t.down()
     t.pencolor('#000000')
     for i in range(1, 9):
         t.write(str(i),font=("Arial",12,"bold"))
-        t.up()
         t.forward(size)
-        t.down()
-    t.up()
     t.goto(-(4.5*size),(3.4*size))
-    t.down()
     for i in range(8):
         t.write(chr(65+i),font=("Arial",12,"bold"))
-        t.up()
         t.goto(-(4.5*size),((4*size)+(i*-size)-(1.7*size)))
-        t.down()
 def drawCheckerBoard(t,x,y,size) :
-    t.tracer(False)
     for i in range(4):
         drawLightDarkRow(t,x,y,size)
         y = y-size
@@ -115,27 +105,19 @@ def initialState(t, size) :
     t.goto(x, y)
     color = light
     state = 1
+    team = 1
     for side in range(2) :
         for i in range(3) :
             CB.append([])
             for r in range(4) :
                 drawPiece(t, x, y, size, color)
                 x = x + (size * 2)
-                #repetitive code much?
-                if (state == 1) :
-                    if (i % 2 == 0) :
-                        CB[-1].append(0)
-                        CB[-1].append(state)
-                    else :
-                        CB[-1].append(state)
-                        CB[-1].append(0)
+                if (i % 2 == 0 and team == 1) or (i % 2 != 0 and team == 3) :
+                    CB[-1].append(0)
+                    CB[-1].append(team)
                 else :
-                    if (i % 2 == 0) :
-                        CB[-1].append(state + 3)
-                        CB[-1].append(0)
-                    else :
-                        CB[-1].append(0)
-                        CB[-1].append(state + 3)
+                    CB[-1].append(team)
+                    CB[-1].append(0)
             y = y - size
             if (i % 2 == 0) :
                 x = -(3 + state)*size
@@ -145,6 +127,7 @@ def initialState(t, size) :
         y = -size
         x = -4*size
         state = 0
+        team = 3
     #insert the two empty rows at the center of the board
     CB.insert(3, [0, 0, 0, 0, 0, 0, 0, 0])
     CB.insert(4, [0, 0, 0, 0, 0, 0, 0, 0])
@@ -157,9 +140,6 @@ def moveChecker(move) :
         print("Invalid move")
         return
     currentPiece = CB[getRow(move[0], False)][getCol(move[1], False)]
-    if (currentPiece == 0) :
-        print("You can't move a piece that doesn't exist.")
-        return
     if (fromX % 2 == 0 and fromY % 2 != 0) :
         colorSqr = "#FFCE9E"
     else :
@@ -183,6 +163,32 @@ def moveChecker(move) :
 def updateState() :
     t.tracer(True)
 
+def msg(msg, typeM) :
+    if (typeM == "error") :
+        print("ERROR - ", msg)
+    else :
+        print("SUCCESS - ", msg)
+
+#verification of moves
+def isInvalidMove(move, player) :
+    toY = getRow(move[3])
+    toX = getCol(move[4])
+    currentMove = CB[getRow(move[0], False)][getCol(move[1], False)]
+    toMove = CB[getRow(move[3], False)][getCol(move[4], False)]
+    #check for dark square
+    if (toX % 2 != 0 and toY % 2 != 0) :
+        msg("You need to move to a dark square my friend.", "error")
+        error = True
+    #check for valid checker move
+    if (currentMove != player or currentMove != player + 1) :
+        msg("Move your own checker loser!", "error")
+        return True
+    #check for empty square
+    if (toMove != 0) :
+        msg("You need to move to an empty square my friend.", "error")
+        return True
+    return False
+
 def showBoard() :
     print("  1 2 3 4 5 6 7 8")
     row = 65
@@ -201,18 +207,22 @@ def checkers(t, size) :
     updateState()
     stop = False
     while (stop != True) :
-        p1 = input("Dark Player, please enter a move => ")
+        p1 = input("Light Player, please enter a move => ")
+        while isInvalidMove(p1, 1) == True :
+            p1 = input("Light Player, please enter a move => ")
         if (p1 != "exit") :
             moveChecker(p1)
             #get player 2's move
-            p2 = input("Light Player, please enter a move => ")
+            p2 = input("Dark Player, please enter a move => ")
+            while isInvalidMove(p2, 3) == True :
+                p2 = input("Dark Player, please enter a move => ")
             if (p2 != "exit") :
                 moveChecker(p2)
             else :
-                print("Stopping Game")
+                print("Game Over")
                 stop = True
         else :
-            print("Stopping Game")
+            print("Game Over")
             stop = True
 
 checkers(t, size)
