@@ -8,6 +8,7 @@ t.up()
 light = "white"
 dark = "#C40003"
 size = 60
+gameRunning = False
 
 #The game tracker
 CB = []
@@ -21,7 +22,7 @@ def getRow(c, coor = True) :
             return topY - ((abs(65 - ord(c))) * size)
         else :
             return abs(65 - ord(c))
-    return False
+    return "failed"
 def getCol(c, coor = True) :
     #handle errors
     try :
@@ -33,9 +34,9 @@ def getCol(c, coor = True) :
                 return topX + ((c - 1) * size)
             else :
                 return (c - 1)
-        return False
+        return "failed"
     except :
-        return False
+        return "failed"
 #give me a square!
 def drawSquare(t,x,y,size,color) :
     t.tracer(False)
@@ -49,7 +50,7 @@ def drawSquare(t,x,y,size,color) :
         t.right(90)
     t.end_fill()
 #give me a circle!
-def drawPiece(t, x, y, size, color) :
+def drawPiece(t, x, y, size, color, king = False) :
     t.tracer(False)
     radius = size / 2.5
     t.up()
@@ -67,6 +68,13 @@ def drawPiece(t, x, y, size, color) :
         t.right(1)
     t.end_fill()
     t.width(1)
+    #king me
+    if (king == True) :
+        t.up()
+        t.goto(x + (0.35*size), y - size * 0.75)
+        #type a "K" for king of course
+        t.write("K",font=("Arial",12,"bold"))
+        t.down()
 def drawDarkLightRow(t,x,y,size) :
     for i in range(4):
         drawSquare(t,x,y,size,"#D18B47")
@@ -79,9 +87,7 @@ def drawLightDarkRow(t,x,y,size) :
         x=x+size
         drawSquare(t,x,y,size,"#D18B47")
         x=x+size
-        
 def labelBoard(t, size) :
-    t.tracer(False)
     t.up()
     t.goto(-(3.6*size),(4.1*size))
     t.pencolor('#000000')
@@ -99,7 +105,6 @@ def drawCheckerBoard(t,x,y,size) :
         drawDarkLightRow(t,x,y,size)
         y = y-size
 def initialState(t, size) :
-    t.tracer(False)
     y = 4*size
     x = -3*size
     t.goto(x, y)
@@ -131,57 +136,78 @@ def initialState(t, size) :
     #insert the two empty rows at the center of the board
     CB.insert(3, [0, 0, 0, 0, 0, 0, 0, 0])
     CB.insert(4, [0, 0, 0, 0, 0, 0, 0, 0])
-
 def moveChecker(move) :
     t.tracer(False)
+    king = False
     fromY = getRow(move[0])
     fromX = getCol(move[1])
-    if (fromY == False and fromX == False) :
-        print("Invalid move")
-        return
     currentPiece = CB[getRow(move[0], False)][getCol(move[1], False)]
-    if (fromX % 2 == 0 and fromY % 2 != 0) :
-        colorSqr = "#FFCE9E"
-    else :
-        colorSqr = "#D18B47"
-    drawSquare(t, fromX, fromY, size, colorSqr)
+    drawSquare(t, fromX, fromY, size, "#D18B47")
     toY = getRow(move[3])
     toX = getCol(move[4])
-    if (toY == False and toX == False) :
-        print("Invalid move")
-        return
     if (currentPiece == 1 or currentPiece == 2) :
         color = light
+        #king me
+        if (currentPiece == 1 and getRow(move[3], False) == 7) or (currentPiece == 2) :
+            currentPiece = 2
+            king = True
     else :
         color = dark
-    drawPiece(t, toX, toY, size, color)
+        #king me
+        if (currentPiece == 3 and getRow(move[3], False) == 0) or (currentPiece == 4) :
+            currentPiece = 4
+            king = True
+    drawPiece(t, toX, toY, size, color, king)
     #update internal game state
     CB[getRow(move[3], False)][getCol(move[4], False)] = currentPiece
     CB[getRow(move[0], False)][getCol(move[1], False)] = 0
     #show changes on board
     updateState()
+#I'm too lazy to type t.tracer(True)
 def updateState() :
     t.tracer(True)
-
+#I got tired of making my info messages pretty(ish)
 def msg(msg, typeM) :
     if (typeM == "error") :
-        print("ERROR - ", msg)
+        print("ERROR - " + msg)
     else :
-        print("SUCCESS - ", msg)
-
+        print("SUCCESS - " + msg)
 #verification of moves
 def isInvalidMove(move, player) :
-    toY = getRow(move[3])
-    toX = getCol(move[4])
+    #allow for exit commands
+    if (move == "exit") :
+        return False
+    #catch errors
+    try :
+        fromY = getRow(move[0])
+        fromX = getCol(move[1])
+        toY = getRow(move[3])
+        toX = getCol(move[4])
+    except :
+        msg("Invalid move, please try again.", "error")
+        return True
+    #catch invalid moves
+    if (fromY == "failed" or fromX == "failed" or toY == "failed" or toX == "failed") :
+        msg("Invalid move, please try again.", "error")
+        return True
+    #get the move in the game tracker
     currentMove = CB[getRow(move[0], False)][getCol(move[1], False)]
     toMove = CB[getRow(move[3], False)][getCol(move[4], False)]
-    #check for dark square
-    if (toX % 2 != 0 and toY % 2 != 0) :
-        msg("You need to move to a dark square my friend.", "error")
-        error = True
     #check for valid checker move
-    if (currentMove != player or currentMove != player + 1) :
+    if (currentMove != player and currentMove != player + 1) :
         msg("Move your own checker loser!", "error")
+        return True
+    #all of this code will need to be changed later, as it will not allow for jumps. But yay for now!
+    #check to make sure checker is moving in right direction, this will only work for pieces that are not kings
+    if (player == 1 and currentMove != player + 1 and getRow(move[0], False) + 1 != getRow(move[3], False)) or (player == 3 and currentMove != player + 1 and getRow(move[0], False) - 1 != getRow(move[3], False)) :
+        msg("You can only move forward one row with that piece.", "error")
+        return True
+    elif (currentMove == player + 1 and getRow(move[0], False) + 1 != getRow(move[3], False) and getRow(move[0], False) - 1 != getRow(move[3], False)) :
+        msg("You can only move one row at a time silly!", "error")
+        return True
+    #check for diagonal move
+    if (getCol(move[1], False) + 1 != getCol(move[4], False)) and (getCol(move[1], False) - 1 != getCol(move[4], False)) :
+        msg("You have to move diagonally.", "error")
         return True
     #check for empty square
     if (toMove != 0) :
@@ -199,30 +225,31 @@ def showBoard() :
         print()
         row += 1
 
-#Where the magic happens    
+#Where the magic happens!
 def checkers(t, size) :
     drawCheckerBoard(t,-4*size,4*size,size)
     initialState(t, size)
     labelBoard(t, size)
     updateState()
-    stop = False
-    while (stop != True) :
+    gameRunning = True
+    while (gameRunning == True) :
         p1 = input("Light Player, please enter a move => ")
         while isInvalidMove(p1, 1) == True :
             p1 = input("Light Player, please enter a move => ")
-        if (p1 != "exit") :
+        if (p1 == "exit") :
+            gameRunning = False
+        else :
             moveChecker(p1)
+            msg("Light player has made their move (" + p1 + ")\n----------------------------------", "success")
             #get player 2's move
             p2 = input("Dark Player, please enter a move => ")
             while isInvalidMove(p2, 3) == True :
                 p2 = input("Dark Player, please enter a move => ")
-            if (p2 != "exit") :
-                moveChecker(p2)
+            if (p2 == "exit") :
+                gameRunning = False
             else :
-                print("Game Over")
-                stop = True
-        else :
-            print("Game Over")
-            stop = True
+                moveChecker(p2)
+                msg("Dark player has made their move (" + p2 + ")\n----------------------------------", "success")
+    msg("Game stopped!", "success")
 
 checkers(t, size)
