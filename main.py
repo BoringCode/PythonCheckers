@@ -146,24 +146,7 @@ def moveChecker(move) :
             king = True
     #detect the jump!
     if (fromRow + 2 == toRow or fromRow - 2 == toRow) :
-        if (fromRow > toRow) :
-            if (fromCol > toCol) :                
-                drawSquare(t, fromX - size, fromY + size, size, "#D18B47")
-                CB[toRow - 1][toCol - 1] = 0
-                print("1")
-            else :
-                drawSquare(t, fromX - size, fromY - size, size, "#D18B47")
-                CB[toRow - 1][toCol + 1] = 0
-                print("2")
-        else :
-            if (fromCol > toCol) :                
-                drawSquare(t, fromX + size, fromY + size, size, "#D18B47")
-                CB[toRow + 1][toCol - 1] = 0
-                print("3")
-            else :
-                drawSquare(t, fromX + size, fromY - size, size, "#D18B47")
-                CB[toRow + 1][toCol + 1] = 0
-                print("4")
+        print("Jump detected")
     drawPiece(t, toX, toY, size, color, king)
     #update internal game state
     CB[toRow][toCol] = currentPiece
@@ -183,59 +166,84 @@ def msg(msg, typeM) :
 def isInvalidMove(move, player) :
     #allow for exit commands
     if (move == "exit") :
-        return False
-    #catch errors
-    try :
-        fromRow = getRow(move[0], False)
-        fromCol = getCol(move[1], False)
-        toRow = getRow(move[3], False)
-        toCol = getCol(move[4], False)
-    except :
+        return False    
+    #get the moves
+    moves = move.split(":")
+    #evaluate each move
+    currRow = getRow(moves[0][0], False)
+    currCol = getCol(moves[0][1], False)
+    if (currRow == "failed" or currCol == "failed") :
         msg("Invalid move, please try again.", "error")
         return True
-    #catch invalid moves
-    if (fromRow == "failed" or fromCol == "failed" or toRow == "failed" or toCol == "failed") :
-        msg("Invalid move, please try again.", "error")
+    startPiece = CB[currRow][currCol]
+    if (startPiece != player and startPiece != player + 1) :
+        msg("You have to move your own piece loser!", "error")
         return True
-    #get the move in the game tracker
-    currentMove = CB[fromRow][fromCol]
-    toMove = CB[toRow][toCol]
-    #check for valid checker move
-    if (currentMove != player and currentMove != player + 1) :
-        msg("Move your own checker loser!", "error")
-        return True
-    #all of this code will need to be changed later, as it will not allow for jumps. But yay for now!
-    #check to make sure checker is moving in right direction, this will only work for pieces that are not kings
+    #evaluate the rest of the moves
+    for move in range(1, len(moves)) :
+        #get the current move and evalulate it
+        evalRow = getRow(moves[move][0], False)
+        evalCol = getCol(moves[move][1], False)
+        #make sure it is the proper format
+        if (evalRow == "failed" or evalCol == "failed") :
+            msg("Invalid move, please try again.", "error")
+            return True
+        currSquare = CB[evalRow][evalCol]
+        #check to make sure you are move to an empty square
+        if (currSquare != 0) :
+            msg("You need to move to an empty square.", "error")
+            return True
+        #check to see if current move is a double jump
+        if (abs(evalRow - currRow) == 2) and (abs(evalCol - currCol) == 2) :
+            #check to make sure piece is moving in the right direction
+            if ((player == 1 and evalRow - currRow != 2) or (player == 3 and evalRow - currRow != -2)) and (startPiece != player + 1) :
+                msg("You have to move forward with that piece.", "error")
+                return True
+            checkJump = CB[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2]
+            #check to make sure the player is jumping over a valid piece
+            if (checkJump == 0 or checkJump == player or checkJump == player + 1) :
+                msg("You have to jump over your opponent's piece.", "error")
+                return True
+        #if the move isn't a double jump, make sure it is a valid move
+        elif ((player == 1 and evalRow - currRow != 1) or (player == 3 and evalRow - currRow != -1)) and (abs(evalCol - currCol) != 1) and (startPiece != player + 1) :
+            msg("You can only move forward diagonally with that piece.", "error")
+            return True
+        elif (abs(evalRow - currRow) != 1) and (abs(evalCol - currCol) != 1) :
+            msg("You can only move one row, diagonally with that piece.", "error")
+            return True
+        currRow = evalRow
+        currCol = evalCol
+        
 
-    #must be a jump of course!
-    if (fromRow + 2 == toRow or fromRow - 2 == toRow) :
-        if (player == 1 and currentMove != player + 1 and fromRow + 2 != toRow) or (player == 3 and currentMove != player + 1 and fromRow - 2 != toRow) :
-            msg("You can only jump forward.", "error")
-            return True
-        if (fromRow > toRow) :
-            if ((CB[fromRow - 1][fromCol + 1] == 0) or (CB[fromRow - 1][fromCol + 1] == player) or (CB[fromRow - 1][fromCol + 1] == player + 1)) and ((CB[fromRow - 1][fromCol - 1] == 0) or (CB[fromRow - 1][fromCol - 1] == player) or (CB[fromRow - 1][fromCol - 1] == player + 1)) :
-                msg("Invalid jump, you need to jump the opposing player.", "error")
-                return True
-        else :
-            if ((CB[fromRow + 1][fromCol + 1] == 0) or (CB[fromRow + 1][fromCol + 1] == player) or (CB[fromRow + 1][fromCol + 1] == player + 1)) and ((CB[fromRow + 1][fromCol - 1] == 0) or (CB[fromRow + 1][fromCol - 1] == player) or (CB[fromRow + 1][fromCol - 1] == player + 1)) :
-                msg("Invalid jump, you need to jump the opposing player.", "error")
-                return True
-    #since jumps basically override a lot of basic rules, I put an else statement in for checking anything else.
-    else :
-        if (player == 1 and currentMove != player + 1 and fromRow + 1 != toRow) or (player == 3 and currentMove != player + 1 and fromRow - 1 != toRow) :
-            msg("You can only move forward one row with that piece.", "error")
-            return True
-        elif (currentMove == player + 1 and fromRow + 1 != toRow and fromRow - 1 != toRow) :
-            msg("You can only move one row at a time silly!", "error")
-            return True
-        #check for diagonal move
-        if (fromCol + 1 != toCol) and (fromCol - 1 != toCol) :
-            msg("You have to move diagonally.", "error")
-            return True
-    #check for empty square
-    if (toMove != 0) :
-        msg("You need to move to an empty square my friend.", "error")
-        return True
+
+    
+    #must be multi jump
+    #if (len(moves) > 2) :
+        
+    return True
+
+
+    
+##    #must be a jump of course!
+##    if (fromRow + 2 == toRow or fromRow - 2 == toRow) :
+##        print("Jump detected")
+##
+##    #since jumps basically override a lot of basic rules, I put an else statement in for checking anything else.
+##    else :
+##        if (player == 1 and currentMove != player + 1 and fromRow + 1 != toRow) or (player == 3 and currentMove != player + 1 and fromRow - 1 != toRow) :
+##            msg("You can only move forward one row with that piece.", "error")
+##            return True
+##        elif (currentMove == player + 1 and fromRow + 1 != toRow and fromRow - 1 != toRow) :
+##            msg("You can only move one row at a time silly!", "error")
+##            return True
+##        #check for diagonal move
+##        if (fromCol + 1 != toCol) and (fromCol - 1 != toCol) :
+##            msg("You have to move diagonally.", "error")
+##            return True
+##    #check for empty square
+##    if (toMove != 0) :
+##        msg("You need to move to an empty square my friend.", "error")
+##        return True
     return False
 def showBoard() :
     print("  1 2 3 4 5 6 7 8")
@@ -249,7 +257,7 @@ def showBoard() :
 #Where the magic happens!
 def checkers(t, size) :
     filename = input("Enter a filename => ")
-    while filename.find(".txt") == -1 and filename != "" :
+    while filename.find(".txt") == -1 and filename != "" and filename == ".txt" :
         print("Invalid filename")
         filename = input("Enter a filename => ")
     if (filename != "") :
