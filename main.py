@@ -36,7 +36,7 @@ def getCol(c, coor = True) :
                 return (c - 1)
         return "failed"
     except :
-        return "failed"
+        return "failed" 
 #give me a square!
 def drawSquare(t,x,y,size,color) :
     t.tracer(False)
@@ -122,36 +122,49 @@ def initialState(t, size) :
 def moveChecker(move) :
     t.tracer(False)
     king = False
-    fromRow = getRow(move[0], False)
-    fromCol = getCol(move[1], False)
-    toRow = getRow(move[3], False)
-    toCol = getCol(move[4], False)
-    fromY = getRow(move[0])
-    fromX = getCol(move[1])
-    currentPiece = CB[getRow(move[0], False)][getCol(move[1], False)]
-    drawSquare(t, fromX, fromY, size, "#D18B47")
-    toY = getRow(move[3])
-    toX = getCol(move[4])
-    if (currentPiece == 1 or currentPiece == 2) :
-        color = light
-        #king me
-        if (currentPiece == 1 and getRow(move[3], False) == 7) or (currentPiece == 2) :
-            currentPiece = 2
-            king = True
-    else :
-        color = dark
-        #king me
-        if (currentPiece == 3 and getRow(move[3], False) == 0) or (currentPiece == 4) :
-            currentPiece = 4
-            king = True
-    #detect the jump!
-    if (fromRow + 2 == toRow or fromRow - 2 == toRow) :
-        print("Jump detected")
-    drawPiece(t, toX, toY, size, color, king)
-    #update internal game state
-    CB[toRow][toCol] = currentPiece
-    CB[fromRow][fromCol] = 0
-    #show changes on board
+    moves = move.split(":")
+    currRow = getRow(moves[0][0], False)
+    currCol = getCol(moves[0][1], False)
+    currY = getRow(moves[0][0])
+    currX = getCol(moves[0][1])
+    for move in range(1, len(moves)) :
+        #remove the current piece
+        drawSquare(t, currY, currX, size, "#D18B47")
+        CB[currRow][currCol] = 0
+        #move the piece
+        evalRow = getRow(moves[move][0], False)
+        evalCol = getCol(moves[move][1], False)
+        evalY = getRow(moves[move][0])
+        evalX = getRow(moves[move][1])
+        evalPiece = CB[evalRow][evalCol]
+        #calculate if double jump
+        if (abs(evalRow - currRow) == 2) and (abs(evalCol - currCol) == 2) :
+            CB[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2] = 0
+            eraseY = getRow(chr((currRow + (evalRow - currRow) // 2) + 65))
+            eraseX = getCol(abs(evalCol - currCol) + 1)
+            print(eraseY)
+            print(eraseX)
+            print(getRow("B"))
+            print(getCol("3"))
+            drawSquare(t, eraseY, eraseX, size, "#D18B47")
+        if evalPiece in range(1, 3) :
+            color = light
+            #king me
+            if (evalRow == 7) or (evalPiece == 2) :
+                evalPiece = 2
+                king = True
+        else :
+            color = dark
+            if (evalRow = 0) or (evalPiece == 4) :
+                evalPiece = 4
+                king = True
+        drawPiece(t, evalY, evalY, size, color, king)
+        CB[evalRow][evalCol] = evalPiece
+        #I want to evaluate the current position next time
+        currRow = evalRow
+        currCol = evalCol
+        currY = evalY
+        currX = evalX        
     updateState()
 #I'm too lazy to type t.tracer(True)
 def updateState() :
@@ -208,42 +221,14 @@ def isInvalidMove(move, player) :
         elif ((player == 1 and evalRow - currRow != 1) or (player == 3 and evalRow - currRow != -1)) and (abs(evalCol - currCol) != 1) and (startPiece != player + 1) :
             msg("You can only move forward diagonally with that piece.", "error")
             return True
+        #hey, if the user is a king make sure he is at least moving only 1 square at a time
         elif (abs(evalRow - currRow) != 1) and (abs(evalCol - currCol) != 1) :
             msg("You can only move one row, diagonally with that piece.", "error")
             return True
+        #next time we loop through I want to check from where the piece would be, not where it started
         currRow = evalRow
         currCol = evalCol
-        
-
-
-    
-    #must be multi jump
-    #if (len(moves) > 2) :
-        
-    return True
-
-
-    
-##    #must be a jump of course!
-##    if (fromRow + 2 == toRow or fromRow - 2 == toRow) :
-##        print("Jump detected")
-##
-##    #since jumps basically override a lot of basic rules, I put an else statement in for checking anything else.
-##    else :
-##        if (player == 1 and currentMove != player + 1 and fromRow + 1 != toRow) or (player == 3 and currentMove != player + 1 and fromRow - 1 != toRow) :
-##            msg("You can only move forward one row with that piece.", "error")
-##            return True
-##        elif (currentMove == player + 1 and fromRow + 1 != toRow and fromRow - 1 != toRow) :
-##            msg("You can only move one row at a time silly!", "error")
-##            return True
-##        #check for diagonal move
-##        if (fromCol + 1 != toCol) and (fromCol - 1 != toCol) :
-##            msg("You have to move diagonally.", "error")
-##            return True
-##    #check for empty square
-##    if (toMove != 0) :
-##        msg("You need to move to an empty square my friend.", "error")
-##        return True
+    #completly valid move!
     return False
 def showBoard() :
     print("  1 2 3 4 5 6 7 8")
