@@ -127,45 +127,42 @@ def moveChecker(move) :
     currCol = getCol(moves[0][1], False)
     currY = getRow(moves[0][0])
     currX = getCol(moves[0][1])
+    currPiece = CB[currRow][currCol]
     for move in range(1, len(moves)) :
         #remove the current piece
-        drawSquare(t, currY, currX, size, "#D18B47")
+        drawSquare(t, currX, currY, size, "#D18B47")
         CB[currRow][currCol] = 0
         #move the piece
         evalRow = getRow(moves[move][0], False)
         evalCol = getCol(moves[move][1], False)
         evalY = getRow(moves[move][0])
-        evalX = getRow(moves[move][1])
-        evalPiece = CB[evalRow][evalCol]
+        evalX = getCol(moves[move][1])
         #calculate if double jump
         if (abs(evalRow - currRow) == 2) and (abs(evalCol - currCol) == 2) :
             CB[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2] = 0
             eraseY = getRow(chr((currRow + (evalRow - currRow) // 2) + 65))
-            eraseX = getCol(abs(evalCol - currCol) + 1)
-            print(eraseY)
-            print(eraseX)
-            print(getRow("B"))
-            print(getCol("3"))
-            drawSquare(t, eraseY, eraseX, size, "#D18B47")
-        if evalPiece in range(1, 3) :
+            eraseX = getCol((currCol + 1) + ((evalCol - currCol) // 2))
+            drawSquare(t, eraseX, eraseY, size, "#D18B47")
+        if currPiece == 1 or currPiece == 2 :
             color = light
             #king me
-            if (evalRow == 7) or (evalPiece == 2) :
-                evalPiece = 2
+            if (evalRow == 7) or (currPiece == 2) :
+                currPiece = 2
                 king = True
         else :
             color = dark
-            if (evalRow = 0) or (evalPiece == 4) :
-                evalPiece = 4
+            if (evalRow == 0) or (currPiece == 4) :
+                currPiece = 4
                 king = True
-        drawPiece(t, evalY, evalY, size, color, king)
-        CB[evalRow][evalCol] = evalPiece
+        drawPiece(t, evalX, evalY, size, color, king)
+        CB[evalRow][evalCol] = currPiece
         #I want to evaluate the current position next time
         currRow = evalRow
         currCol = evalCol
         currY = evalY
-        currX = evalX        
-    updateState()
+        currX = evalX
+        currPiece = CB[evalRow][evalCol]
+        updateState()
 #I'm too lazy to type t.tracer(True)
 def updateState() :
     t.tracer(True)
