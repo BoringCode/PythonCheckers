@@ -105,19 +105,10 @@ def drawCheckerBoard(t,x,y,size) :
         drawDarkLightRow(t,x,y,size)
         y = y-size
 def initialState(t, size) :
-    y = 4*size
-    x = -3*size
-    print(y)
-    print(x)
-    t.goto(x, y)
     for row in range(0, len(CB)) :
-        print("ROW - ", chr(row + 65))
         y = getRow(chr(row + 65))
-        print(y)
         for col in range(0, len(CB[row])) :
-            print("COL - ", col + 1)
             x = getCol(col + 1)
-            print(x)
             if (CB[row][col] in range(1, 5)) :
                 if (CB[row][col] in range(1, 3)) :
                     color = light
@@ -224,11 +215,17 @@ def checkers(t, size) :
     if (filename != "") :
         gamefile = open(filename, "r")
         currentPlayer = gamefile.readline()
+        row = 0
         for aline in gamefile :
             CB.append([])
-            for i in range(0, len(aline)) :
+            for i in range(8) :
                 if (ord(aline[i]) in range(48, 53)) :
-                    CB[-1].append(int(aline[i]))
+                    #no invalid board locations
+                    if (row % 2 != i % 2) :
+                        CB[-1].append(int(aline[i]))
+                    else :
+                        CB[-1].append(0)
+            row += 1
         print("File imported.")
     else :
         currentPlayer = "white"
@@ -246,6 +243,7 @@ def checkers(t, size) :
         CB.insert(4, [0, 0, 0, 0, 0, 0, 0, 0])
         print("Default board set up.")
     drawCheckerBoard(t,-4*size,4*size,size)
+    #draw the board based upon the game state
     initialState(t, size)
     labelBoard(t, size)
     updateState()
