@@ -122,6 +122,10 @@ def initialState(t, size) :
 def moveChecker(move) :
     t.tracer(False)
     king = False
+    fromRow = getRow(move[0], False)
+    fromCol = getCol(move[1], False)
+    toRow = getRow(move[3], False)
+    toCol = getCol(move[4], False)
     fromY = getRow(move[0])
     fromX = getCol(move[1])
     currentPiece = CB[getRow(move[0], False)][getCol(move[1], False)]
@@ -140,10 +144,30 @@ def moveChecker(move) :
         if (currentPiece == 3 and getRow(move[3], False) == 0) or (currentPiece == 4) :
             currentPiece = 4
             king = True
+    #detect the jump!
+    if (fromRow + 2 == toRow or fromRow - 2 == toRow) :
+        if (fromRow > toRow) :
+            if (fromCol > toCol) :                
+                drawSquare(t, fromX - size, fromY + size, size, "#D18B47")
+                CB[toRow - 1][toCol - 1] = 0
+                print("1")
+            else :
+                drawSquare(t, fromX - size, fromY - size, size, "#D18B47")
+                CB[toRow - 1][toCol + 1] = 0
+                print("2")
+        else :
+            if (fromCol > toCol) :                
+                drawSquare(t, fromX + size, fromY + size, size, "#D18B47")
+                CB[toRow + 1][toCol - 1] = 0
+                print("3")
+            else :
+                drawSquare(t, fromX + size, fromY - size, size, "#D18B47")
+                CB[toRow + 1][toCol + 1] = 0
+                print("4")
     drawPiece(t, toX, toY, size, color, king)
     #update internal game state
-    CB[getRow(move[3], False)][getCol(move[4], False)] = currentPiece
-    CB[getRow(move[0], False)][getCol(move[1], False)] = 0
+    CB[toRow][toCol] = currentPiece
+    CB[fromRow][fromCol] = 0
     #show changes on board
     updateState()
 #I'm too lazy to type t.tracer(True)
@@ -182,16 +206,32 @@ def isInvalidMove(move, player) :
         return True
     #all of this code will need to be changed later, as it will not allow for jumps. But yay for now!
     #check to make sure checker is moving in right direction, this will only work for pieces that are not kings
-    if (player == 1 and currentMove != player + 1 and fromRow + 1 != toRow) or (player == 3 and currentMove != player + 1 and fromRow - 1 != toRow) :
-        msg("You can only move forward one row with that piece.", "error")
-        return True
-    elif (currentMove == player + 1 and fromRow + 1 != toRow and fromRow - 1 != toRow) :
-        msg("You can only move one row at a time silly!", "error")
-        return True
-    #check for diagonal move
-    if (fromCol + 1 != toCol) and (fromCol - 1 != toCol) :
-        msg("You have to move diagonally.", "error")
-        return True
+
+    #must be a jump of course!
+    if (fromRow + 2 == toRow or fromRow - 2 == toRow) :
+        if (player == 1 and currentMove != player + 1 and fromRow + 2 != toRow) or (player == 3 and currentMove != player + 1 and fromRow - 2 != toRow) :
+            msg("You can only jump forward.", "error")
+            return True
+        if (fromRow > toRow) :
+            if ((CB[fromRow - 1][fromCol + 1] == 0) or (CB[fromRow - 1][fromCol + 1] == player) or (CB[fromRow - 1][fromCol + 1] == player + 1)) and ((CB[fromRow - 1][fromCol - 1] == 0) or (CB[fromRow - 1][fromCol - 1] == player) or (CB[fromRow - 1][fromCol - 1] == player + 1)) :
+                msg("Invalid jump, you need to jump the opposing player.", "error")
+                return True
+        else :
+            if ((CB[fromRow + 1][fromCol + 1] == 0) or (CB[fromRow + 1][fromCol + 1] == player) or (CB[fromRow + 1][fromCol + 1] == player + 1)) and ((CB[fromRow + 1][fromCol - 1] == 0) or (CB[fromRow + 1][fromCol - 1] == player) or (CB[fromRow + 1][fromCol - 1] == player + 1)) :
+                msg("Invalid jump, you need to jump the opposing player.", "error")
+                return True
+    #since jumps basically override a lot of basic rules, I put an else statement in for checking anything else.
+    else :
+        if (player == 1 and currentMove != player + 1 and fromRow + 1 != toRow) or (player == 3 and currentMove != player + 1 and fromRow - 1 != toRow) :
+            msg("You can only move forward one row with that piece.", "error")
+            return True
+        elif (currentMove == player + 1 and fromRow + 1 != toRow and fromRow - 1 != toRow) :
+            msg("You can only move one row at a time silly!", "error")
+            return True
+        #check for diagonal move
+        if (fromCol + 1 != toCol) and (fromCol - 1 != toCol) :
+            msg("You have to move diagonally.", "error")
+            return True
     #check for empty square
     if (toMove != 0) :
         msg("You need to move to an empty square my friend.", "error")
