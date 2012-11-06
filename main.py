@@ -107,35 +107,27 @@ def drawCheckerBoard(t,x,y,size) :
 def initialState(t, size) :
     y = 4*size
     x = -3*size
+    print(y)
+    print(x)
     t.goto(x, y)
-    color = light
-    state = 1
-    team = 1
-    for side in range(2) :
-        for i in range(3) :
-            CB.append([])
-            for r in range(4) :
-                drawPiece(t, x, y, size, color)
-                x = x + (size * 2)
-                if (i % 2 == 0 and team == 1) or (i % 2 != 0 and team == 3) :
-                    CB[-1].append(0)
-                    CB[-1].append(team)
+    for row in range(0, len(CB)) :
+        print("ROW - ", chr(row + 65))
+        y = getRow(chr(row + 65))
+        print(y)
+        for col in range(0, len(CB[row])) :
+            print("COL - ", col + 1)
+            x = getCol(col + 1)
+            print(x)
+            if (CB[row][col] in range(1, 5)) :
+                if (CB[row][col] in range(1, 3)) :
+                    color = light
                 else :
-                    CB[-1].append(team)
-                    CB[-1].append(0)
-            y = y - size
-            if (i % 2 == 0) :
-                x = -(3 + state)*size
-            else :
-                x = -(3 + side)*size
-        color = dark
-        y = -size
-        x = -4*size
-        state = 0
-        team = 3
-    #insert the two empty rows at the center of the board
-    CB.insert(3, [0, 0, 0, 0, 0, 0, 0, 0])
-    CB.insert(4, [0, 0, 0, 0, 0, 0, 0, 0])
+                    color = dark
+                if (CB[row][col] == 2 or CB[row][col] == 4) :
+                    king = True
+                else :
+                    king = False
+                drawPiece(t, x, y, size, color, king)
 def moveChecker(move) :
     t.tracer(False)
     king = False
@@ -179,34 +171,34 @@ def isInvalidMove(move, player) :
         return False
     #catch errors
     try :
-        fromY = getRow(move[0])
-        fromX = getCol(move[1])
-        toY = getRow(move[3])
-        toX = getCol(move[4])
+        fromRow = getRow(move[0], False)
+        fromCol = getCol(move[1], False)
+        toRow = getRow(move[3], False)
+        toCol = getCol(move[4], False)
     except :
         msg("Invalid move, please try again.", "error")
         return True
     #catch invalid moves
-    if (fromY == "failed" or fromX == "failed" or toY == "failed" or toX == "failed") :
+    if (fromRow == "failed" or fromCol == "failed" or toRow == "failed" or toCol == "failed") :
         msg("Invalid move, please try again.", "error")
         return True
     #get the move in the game tracker
-    currentMove = CB[getRow(move[0], False)][getCol(move[1], False)]
-    toMove = CB[getRow(move[3], False)][getCol(move[4], False)]
+    currentMove = CB[fromRow][fromCol]
+    toMove = CB[toRow][toCol]
     #check for valid checker move
     if (currentMove != player and currentMove != player + 1) :
         msg("Move your own checker loser!", "error")
         return True
     #all of this code will need to be changed later, as it will not allow for jumps. But yay for now!
     #check to make sure checker is moving in right direction, this will only work for pieces that are not kings
-    if (player == 1 and currentMove != player + 1 and getRow(move[0], False) + 1 != getRow(move[3], False)) or (player == 3 and currentMove != player + 1 and getRow(move[0], False) - 1 != getRow(move[3], False)) :
+    if (player == 1 and currentMove != player + 1 and fromRow + 1 != toRow) or (player == 3 and currentMove != player + 1 and fromRow - 1 != toRow) :
         msg("You can only move forward one row with that piece.", "error")
         return True
-    elif (currentMove == player + 1 and getRow(move[0], False) + 1 != getRow(move[3], False) and getRow(move[0], False) - 1 != getRow(move[3], False)) :
+    elif (currentMove == player + 1 and fromRow + 1 != toRow and fromRow - 1 != toRow) :
         msg("You can only move one row at a time silly!", "error")
         return True
     #check for diagonal move
-    if (getCol(move[1], False) + 1 != getCol(move[4], False)) and (getCol(move[1], False) - 1 != getCol(move[4], False)) :
+    if (fromCol + 1 != toCol) and (fromCol - 1 != toCol) :
         msg("You have to move diagonally.", "error")
         return True
     #check for empty square
@@ -214,7 +206,6 @@ def isInvalidMove(move, player) :
         msg("You need to move to an empty square my friend.", "error")
         return True
     return False
-
 def showBoard() :
     print("  1 2 3 4 5 6 7 8")
     row = 65
@@ -224,9 +215,36 @@ def showBoard() :
             print(CB[i][item], end=" ")
         print()
         row += 1
-
 #Where the magic happens!
 def checkers(t, size) :
+    filename = input("Enter a filename => ")
+    while filename.find(".txt") == -1 and filename != "" :
+        print("Invalid filename")
+        filename = input("Enter a filename => ")
+    if (filename != "") :
+        gamefile = open(filename, "r")
+        currentPlayer = gamefile.readline()
+        for aline in gamefile :
+            CB.append([])
+            for i in range(0, len(aline)) :
+                if (ord(aline[i]) in range(48, 53)) :
+                    CB[-1].append(int(aline[i]))
+        print("File imported.")
+    else :
+        currentPlayer = "white"
+        for team in range(1, 4, 2) :
+            for i in range(3) :
+                CB.append([])
+                for r in range(4) :
+                    if (i % 2 == 0 and team == 1) or (i % 2 != 0 and team == 3) :
+                        CB[-1].append(0)
+                        CB[-1].append(team)
+                    else :
+                        CB[-1].append(team)
+                        CB[-1].append(0)
+        CB.insert(3, [0, 0, 0, 0, 0, 0, 0, 0])
+        CB.insert(4, [0, 0, 0, 0, 0, 0, 0, 0])
+        print("Default board set up.")
     drawCheckerBoard(t,-4*size,4*size,size)
     initialState(t, size)
     labelBoard(t, size)
