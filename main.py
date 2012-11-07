@@ -166,6 +166,24 @@ def moveChecker(move) :
 #I'm too lazy to type t.tracer(True)
 def updateState() :
     t.tracer(True)
+
+#Is it over yet?
+def gameOver() :
+    lightCount = 0
+    darkCount = 0
+    for row in CB :
+        for col in row :
+            if (col == 1 or col == 2) :
+                lightCount += 1
+            elif (col == 3 or col == 4) :
+                darkCount += 1
+    if (lightCount == 0) :
+        msg("Dark player has won!", "success")
+        return True
+    elif (darkCount == 0) :
+        msg("Light player has won!", "success")
+        return True
+    return False
 #I got tired of making my info messages pretty(ish)
 def msg(msg, typeM) :
     if (typeM == "error") :
@@ -174,9 +192,6 @@ def msg(msg, typeM) :
         print("SUCCESS - " + msg)
 #verification of moves
 def isInvalidMove(move, player) :
-    #allow for exit commands
-    if (move == "exit") :
-        return False    
     #get the moves
     moves = move.split(":")
     #evaluate each move
@@ -203,6 +218,9 @@ def isInvalidMove(move, player) :
         if (currSquare != 0) :
             msg("You need to move to an empty square.", "error")
             return True
+        #Just in case the move involves kinging the player and then jumping again
+        if (evalRow == 7 and player == 1) or (evalRow == 0 and player == 3) :
+            startPiece = player + 1
         #check to see if current move is a double jump
         if (abs(evalRow - currRow) == 2) and (abs(evalCol - currCol) == 2) :
             #check to make sure piece is moving in the right direction
@@ -215,11 +233,11 @@ def isInvalidMove(move, player) :
                 msg("You have to jump over your opponent's piece.", "error")
                 return True
         #if the move isn't a double jump, make sure it is a valid move
-        elif ((player == 1 and evalRow - currRow != 1) or (player == 3 and evalRow - currRow != -1)) and (abs(evalCol - currCol) != 1) and (startPiece != player + 1) :
+        elif ((player == 1 and evalRow - currRow != 1) or (player == 3 and evalRow - currRow != -1) or (abs(evalCol - currCol) != 1)) and (startPiece != player + 1) :
             msg("You can only move forward diagonally with that piece.", "error")
             return True
         #hey, if the user is a king make sure he is at least moving only 1 square at a time
-        elif (abs(evalRow - currRow) != 1) and (abs(evalCol - currCol) != 1) :
+        elif (abs(evalRow - currRow) != 1) or (abs(evalCol - currCol) != 1) :
             msg("You can only move one row, diagonally with that piece.", "error")
             return True
         #next time we loop through I want to check from where the piece would be, not where it started
@@ -239,7 +257,7 @@ def showBoard() :
 #Where the magic happens!
 def checkers(t, size) :
     filename = input("Enter a filename => ")
-    while filename.find(".txt") == -1 and filename != "" and filename == ".txt" :
+    while filename[-4:] != ".txt" and filename != "" and filename != ".txt" :
         print("Invalid filename")
         filename = input("Enter a filename => ")
     if (filename != "") :
@@ -280,22 +298,24 @@ def checkers(t, size) :
     gameRunning = True
     while (gameRunning == True) :
         p1 = input("Light Player, please enter a move => ")
-        while isInvalidMove(p1, 1) == True :
+        while isInvalidMove(p1, 1) == True and p1 != "exit" :
             p1 = input("Light Player, please enter a move => ")
         if (p1 == "exit") :
-            gameRunning = False
-        else :
-            moveChecker(p1)
-            msg("Light player has made their move (" + p1 + ")\n----------------------------------", "success")
-            #get player 2's move
+            return
+        moveChecker(p1)
+        msg("Light player has made their move (" + p1 + ")\n----------------------------------", "success")
+        if (gameOver() == True) :
+            return
+        #get player 2's move
+        p2 = input("Dark Player, please enter a move => ")
+        while isInvalidMove(p2, 3) == True and p2 != "exit" :
             p2 = input("Dark Player, please enter a move => ")
-            while isInvalidMove(p2, 3) == True :
-                p2 = input("Dark Player, please enter a move => ")
-            if (p2 == "exit") :
-                gameRunning = False
-            else :
-                moveChecker(p2)
-                msg("Dark player has made their move (" + p2 + ")\n----------------------------------", "success")
+        if (p2 == "exit") :
+            return
+        moveChecker(p2)
+        msg("Dark player has made their move (" + p2 + ")\n----------------------------------", "success")
+        if (gameOver() == True) :
+            return
     msg("Game stopped!", "success")
 
 checkers(t, size)
