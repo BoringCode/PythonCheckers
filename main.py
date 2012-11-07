@@ -195,18 +195,32 @@ def isInvalidMove(move, player) :
         return False
     #get the moves
     moves = move.split(":")
+    #check to make sure there is at least one move pair (ex, A2:B3)
+    if (len(moves) < 2) :
+        msg("You must make at least one move.", "error")
+        return True
+    #copy the list, so we can verify that all the moves are correct (even if they come back to a location I've already been)
+    copy = copyList(CB)
     #evaluate each move
+    #check to make sure move is at least 2 characters long
+    if (len(moves[0]) < 2) :
+        msg("Invalid move, please try again.", "error")
+        return True
     currRow = getRow(moves[0][0], False)
     currCol = getCol(moves[0][1], False)
     if (currRow == "failed" or currCol == "failed") :
         msg("Invalid move, please try again.", "error")
         return True
-    startPiece = CB[currRow][currCol]
+    startPiece = copy[currRow][currCol]
     if (startPiece != player and startPiece != player + 1) :
         msg("You have to move your own piece loser!", "error")
         return True
     #evaluate the rest of the moves
     for move in range(1, len(moves)) :
+        #verify that the move is the proper number of chars
+        if (len(moves[move]) < 2) :
+            msg("Invalid move, please try again.", "error")
+            return True
         #get the current move and evalulate it
         evalRow = getRow(moves[move][0], False)
         evalCol = getCol(moves[move][1], False)
@@ -214,7 +228,7 @@ def isInvalidMove(move, player) :
         if (evalRow == "failed" or evalCol == "failed") :
             msg("Invalid move, please try again.", "error")
             return True
-        currSquare = CB[evalRow][evalCol]
+        currSquare = copy[evalRow][evalCol]
         #check to make sure you are move to an empty square
         if (currSquare != 0) :
             msg("You need to move to an empty square.", "error")
@@ -228,11 +242,17 @@ def isInvalidMove(move, player) :
             if ((player == 1 and evalRow - currRow != 2) or (player == 3 and evalRow - currRow != -2)) and (startPiece != player + 1) :
                 msg("You have to move forward with that piece.", "error")
                 return True
-            checkJump = CB[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2]
+            checkJump = copy[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2]
             #check to make sure the player is jumping over a valid piece
             if (checkJump == 0 or checkJump == player or checkJump == player + 1) :
                 msg("You have to jump over your opponent's piece.", "error")
                 return True
+            #remove the piece in the copied game tracker
+            copy[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2] = 0
+        #okay, it isn't a double jump. Which means if someone tries to pass a second move it will be blocked
+        elif (move > 1) :
+            msg("You can only make one move at a time silly.", "error")
+            return True
         #if the move isn't a double jump, make sure it is a valid move
         elif ((player == 1 and evalRow - currRow != 1) or (player == 3 and evalRow - currRow != -1) or (abs(evalCol - currCol) != 1)) and (startPiece != player + 1) :
             msg("You can only move forward diagonally with that piece.", "error")
@@ -242,10 +262,17 @@ def isInvalidMove(move, player) :
             msg("You can only move one row, diagonally with that piece.", "error")
             return True
         #next time we loop through I want to check from where the piece would be, not where it started
+        copy[evalRow][evalCol] = startPiece
+        copy[currRow][currCol] = 0
         currRow = evalRow
         currCol = evalCol
     #completly valid move!
     return False
+#make a complete copy of a list, including internal lists
+def copyList(inList):
+    if isinstance(inList, list):
+        return list( map(copyList, inList) )
+    return inList
 def showBoard() :
     print("  1 2 3 4 5 6 7 8")
     row = 65
