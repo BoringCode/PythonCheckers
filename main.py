@@ -166,7 +166,6 @@ def moveChecker(move) :
 #I'm too lazy to type t.tracer(True)
 def updateState() :
     t.tracer(True)
-
 #Is it over yet?
 def gameOver() :
     lightCount = 0
