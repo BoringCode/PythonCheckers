@@ -192,6 +192,8 @@ def msg(msg, typeM) :
         print("SUCCESS - " + msg)
 #verification of moves
 def isInvalidMove(move, player) :
+    if (move == "exit") :
+        return False
     #get the moves
     moves = move.split(":")
     #evaluate each move
@@ -257,12 +259,12 @@ def showBoard() :
 #Where the magic happens!
 def checkers(t, size) :
     filename = input("Enter a filename => ")
-    while filename[-4:] != ".txt" and filename != "" and filename != ".txt" :
+    while filename[-4:] != ".txt" and filename != "" or filename == ".txt" :
         print("Invalid filename")
         filename = input("Enter a filename => ")
     if (filename != "") :
         gamefile = open(filename, "r")
-        currentPlayer = gamefile.readline()
+        currentPlayer = gamefile.readline().replace("\n", "")
         row = 0
         for aline in gamefile :
             CB.append([])
@@ -296,26 +298,27 @@ def checkers(t, size) :
     labelBoard(t, size)
     updateState()
     gameRunning = True
-    while (gameRunning == True) :
-        p1 = input("Light Player, please enter a move => ")
-        while isInvalidMove(p1, 1) == True and p1 != "exit" :
-            p1 = input("Light Player, please enter a move => ")
-        if (p1 == "exit") :
+    if (currentPlayer == "white") :
+        player = 1
+    else :
+        player = 3
+    while (gameRunning == True) :            
+        move = input(currentPlayer.title() + " player, please enter a move => ")
+        while isInvalidMove(move, player) == True :
+            move = input(currentPlayer.title() + " player, please enter a move => ")
+        if (move == "exit") :
+            msg("Game stopped!", "success")
             return
-        moveChecker(p1)
-        msg("Light player has made their move (" + p1 + ")\n----------------------------------", "success")
+        moveChecker(move)
+        msg(currentPlayer.title() + " player has made their move (" + move + ")\n----------------------------------", "success")
         if (gameOver() == True) :
             return
-        #get player 2's move
-        p2 = input("Dark Player, please enter a move => ")
-        while isInvalidMove(p2, 3) == True and p2 != "exit" :
-            p2 = input("Dark Player, please enter a move => ")
-        if (p2 == "exit") :
-            return
-        moveChecker(p2)
-        msg("Dark player has made their move (" + p2 + ")\n----------------------------------", "success")
-        if (gameOver() == True) :
-            return
-    msg("Game stopped!", "success")
+        #switch the player for the next run through
+        if (player == 1) :
+            player = 3
+            currentPlayer = "black"
+        else :
+            player = 1
+            currentPlayer = "white"
 
 checkers(t, size)
