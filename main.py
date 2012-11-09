@@ -233,10 +233,7 @@ def isInvalidMove(move, player) :
         if (currSquare != 0) :
             msg("You need to move to an empty square.", "error")
             return True
-        #Just in case the move involves kinging the player and then jumping again
-        if (evalRow == 7 and player == 1) or (evalRow == 0 and player == 3) :
-            startPiece = player + 1
-        #check to see if current move is a double jump
+        #check to see if current move is a jump
         if (abs(evalRow - currRow) == 2) and (abs(evalCol - currCol) == 2) :
             #check to make sure piece is moving in the right direction
             if ((player == 1 and evalRow - currRow != 2) or (player == 3 and evalRow - currRow != -2)) and (startPiece != player + 1) :
@@ -249,8 +246,8 @@ def isInvalidMove(move, player) :
                 return True
             #remove the piece in the copied game tracker
             copy[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2] = 0
-        #okay, it isn't a double jump. Which means if someone tries to pass a second move it will be blocked
-        elif (move > 1) :
+        #okay, it isn't a double jump. Which means if someone tries to pass a second move it will be blocked. Also makes sure there is no jump after the single move.
+        elif (move != len(moves) - 1 or move > 1) :
             msg("You can only make one move at a time silly.", "error")
             return True
         #if the move isn't a double jump, make sure it is a valid move
@@ -261,6 +258,9 @@ def isInvalidMove(move, player) :
         elif (abs(evalRow - currRow) != 1) or (abs(evalCol - currCol) != 1) :
             msg("You can only move one row, diagonally with that piece.", "error")
             return True
+        #Just in case the move involves kinging the player and then jumping again
+        if (evalRow == 7 and player == 1) or (evalRow == 0 and player == 3) :
+            startPiece = player + 1
         #next time we loop through I want to check from where the piece would be, not where it started
         copy[evalRow][evalCol] = startPiece
         copy[currRow][currCol] = 0
