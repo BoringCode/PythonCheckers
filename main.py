@@ -1,5 +1,6 @@
 #Graphical stuff
 import cTurtle
+import random
 t = cTurtle.Turtle()
 t.ht()
 t.up()
@@ -9,10 +10,86 @@ light = "white"
 dark = "#C40003"
 size = 60
 gameRunning = False
+debugger = True
+EMPTY = 0
+VALID_RANGE = range(8)
 
 #The game tracker
 CB = []
 
+
+#PLAYER CODE
+def getPossibles(player):
+    possibles = {}
+    incs = [-1, 1]
+    jumpIncs = [-2, 2]
+    if player == 3 :
+        playerPieces = [3,4]
+        opponentPieces=[1,2]
+        rowInc = -1
+        jumpInc = -2
+        crowning = "A"
+    else :
+        playerPieces = [1,2]
+        opponentPieces = [3,4]
+        rowInc = 1
+        jumpInc = 2
+        crowning = "H"
+    possibles["moves"] = findMoves(player, playerPieces, opponentPieces, rowInc, incs)  #puts moves into possibles Dictionary
+    possibles["jumps"] = findMoves(player, playerPieces, opponentPieces, jumpInc, jumpIncs)
+    possibles["crownings"] = findCrownings(player, possibles["moves"] + possibles["jumps"])
+    possibles["blocks"] = []
+    if (debugger == True) :
+        print(possibles)
+    if (len(possibles["jumps"]) > 0) :
+        ideal = possibles["jumps"]
+    else :
+        ideal = possibles["moves"]
+    return ideal
+
+def findCrownings(player, moves) :
+    crownings = []
+    for move in moves :
+        subMoves = move.split(":")
+        if (player == 3 and subMoves[-1][0] == "A") or (player == 1 and subMoves[-1][0] == "H") :
+            crownings.append(move)
+    return crownings
+            
+def findMoves(player, playerPieces, opponentPieces, rowInc, INCs) :
+    moves=[]
+    #process all board positions
+    for row in VALID_RANGE :
+        for col in VALID_RANGE :
+            if CB[row][col] in playerPieces :
+                if CB[row][col] not in [2,4] : #not a king
+                    for colInc in INCs :
+                        toRow = row + rowInc
+                        toCol = col + colInc
+                        move = str(chr(row + 65) + str(col + 1) + ":" + chr(toRow + 65) + str(toCol + 1))
+                        if (toCol in VALID_RANGE and toRow in VALID_RANGE and CB[toRow][toCol] == EMPTY ) :
+                            #jump
+                            if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                if (CB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                    moves.append(move)
+                            else :
+                                moves.append(move)
+                else: #is a king
+                    for rInc in INCs :
+                        for colInc in INCs :
+                            toRow = row + rowInc
+                            toCol = col + colInc
+                            move = str(chr(row + 65) + str(col + 1) + ":" + chr(toRow + 65) + str(toCol + 1))
+                            if (toCol in VALID_RANGE and toRow in VALID_RANGE and CB[toRow][toCol] == EMPTY ) :
+                                #jump
+                                if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                    if (CB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                        moves.append(move)
+                                else :
+                                    moves.append(move)
+    return moves
+
+
+#Actual game
 def getRow(c, coor = True) :
     c = str(c)
     topY = 4*size
@@ -282,6 +359,12 @@ def showBoard() :
             print(CB[i][item], end=" ")
         print()
         row += 1
+
+def automatedMove(player) :
+    possibles = getPossibles(player)
+    index = random.randint(0, len(possibles)-1)
+    return possibles[index]
+        
 #Where the magic happens!
 def checkers(t, size) :
     filename = input("Enter a filename => ")
@@ -328,17 +411,17 @@ def checkers(t, size) :
         player = 1
     else :
         player = 3
-    while (gameRunning == True) :            
-        move = input(currentPlayer.title() + " player, please enter a move => ")
-        while isInvalidMove(move, player) == True :
-            move = input(currentPlayer.title() + " player, please enter a move => ")
-        if (move == "exit") :
-            msg("Game stopped!", "success")
+    while not(gameOver()) :            
+        move = automatedMove(player)
+        if (debugger == True) :
+            print("About to move " + currentPlayer + " player - " + move)
+            input("Press enter to continue...")
+        if (isInvalidMove(move, player)) :
+            print("Invalid move, game over.")
             return
         moveChecker(move)
-        msg(currentPlayer.title() + " player has made their move (" + move + ")\n----------------------------------", "success")
-        if (gameOver() == True) :
-            return
+        if (debugger == True) :
+            showBoard()
         #switch the player for the next run through
         if (player == 1) :
             player = 3
