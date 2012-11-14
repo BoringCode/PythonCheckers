@@ -42,7 +42,7 @@ def getPossibles(player):
     #Calculate if there are any crownings in any of my moves or jumps
     possibles["crownings"] = findCrownings(player, possibles["moves"] + possibles["jumps"])
     #Calculate if any of my jumps or moves can block the opponent from jumping
-    possibles["blocks"] = (opponent, possibles["moves"] + possibles["jumps"])
+    possibles["blocks"] = findBlocks(opponent, possibles["moves"] + possibles["jumps"])
     if (debugger == True) :
         print(possibles)
     return possibles
@@ -75,7 +75,7 @@ def findBlocks(opponent, playerMoves) :
                 if playerMove[-2:] == moves[i] :
                     #Hey, put it in the blocks list
                     blocks.append(playerMove)
-    return blocks                
+    return blocks                 
 def findCrownings(player, moves) :
     crownings = []
     #Loop through all possible moves (including jumps)
@@ -90,23 +90,70 @@ def findCrownings(player, moves) :
                 if (player == 3 and subMove[0] == "A") or (player == 1 and subMove[0] == "H") :
                     crownings.append(move)
     return crownings            
-def findMoves(gameTracker, player, playerPieces, opponentPieces, rowInc, INCs) :
+def findMoves(CB, player, playerPieces, opponentPieces, rowInc, INCs) :
     moves=[]
     #process all board positions
     for row in VALID_RANGE :
         for col in VALID_RANGE :
-            if gameTracker[row][col] in playerPieces :
-                if gameTracker[row][col] not in [2,4] : #not a king
+            if CB[row][col] in playerPieces :
+                if CB[row][col] not in [2,4] : #not a king
                     for colInc in INCs :
                         toRow = row + rowInc
                         toCol = col + colInc
                         move = str(chr(row + 65) + str(col + 1) + ":" + chr(toRow + 65) + str(toCol + 1))
                         #Basic check to make sure the move is valid
-                        if (toCol in VALID_RANGE and toRow in VALID_RANGE and gameTracker[toRow][toCol] == EMPTY ) :
+                        if (toCol in VALID_RANGE and toRow in VALID_RANGE and CB[toRow][toCol] == EMPTY ) :
                             #Detect a jump
                             if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
                                 #Is a valid jump?
-                                if (gameTracker[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                if (CB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                    #The jump is good!
+                                    copyCB = copyList(CB)
+                                    startPiece = copyCB[row][col]
+                                    copyCB[row][col] = 0
+                                    copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                    copyCB[toRow][toCol] = startPiece
+                                    jump = True
+                                    king = False
+                                    if (player == 1 and toRow == 7) or (player == 3 and toRow == 0) :
+                                        king = True
+                                    #While I can still jump, continue to search for a new jump (multi jumps)
+                                    while (jump) :
+                                        #If the move is a king, I can go in any direction
+                                        if (king) :
+                                            row = toRow
+                                            col = toCol
+                                            for rInc in INCs :
+                                                for colInc in INCs :
+                                                    toRow = row + rInc
+                                                    toCol = col + colInc
+                                                    jump = False
+                                                    if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                                        if (toCol in VALID_RANGE and toRow in VALID_RANGE and copyCB[toRow][toCol] == EMPTY ) :
+                                                            #The move.find() check is to make sure it doesn't attempt to go backwards and 
+                                                            if (copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                                                jump = True
+                                                                copyCB[row][col] = 0
+                                                                copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                                                copyCB[toRow][toCol] = startPiece
+                                                                move += ":" + chr(toRow + 65) + str(toCol + 1)
+                                        else :
+                                            row = toRow
+                                            col = toCol
+                                            for colInc in INCs :
+                                                toRow = row + rowInc
+                                                toCol = col + colInc
+                                                jump = False
+                                                if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                                    if (toCol in VALID_RANGE and toRow in VALID_RANGE and copyCB[toRow][toCol] == EMPTY ) :
+                                                        if (copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                                            jump = True
+                                                            copyCB[row][col] = 0
+                                                            copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                                            copyCB[toRow][toCol] = startPiece
+                                                            move += ":" + chr(toRow + 65) + str(toCol + 1)
+                                                            if (player == 1 and toRow == 7) or (player == 3 and toRow == 0) :
+                                                                king = True
                                     moves.append(move)
                             #Not a jump? Okay, it must be a valid move. Continue.
                             else :
@@ -117,10 +164,32 @@ def findMoves(gameTracker, player, playerPieces, opponentPieces, rowInc, INCs) :
                             toRow = row + rInc
                             toCol = col + colInc
                             move = str(chr(row + 65) + str(col + 1) + ":" + chr(toRow + 65) + str(toCol + 1))
-                            if (toCol in VALID_RANGE and toRow in VALID_RANGE and gameTracker[toRow][toCol] == EMPTY ) :
+                            if (toCol in VALID_RANGE and toRow in VALID_RANGE and CB[toRow][toCol] == EMPTY ) :
                                 #jump
                                 if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
-                                    if (gameTracker[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                    if (CB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                        jump = True
+                                        copyCB = copyList(CB)
+                                        startPiece = copyCB[row][col]
+                                        copyCB[row][col] = 0
+                                        copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                        copyCB[toRow][toCol] = startPiece
+                                        while (jump) :
+                                            row = toRow
+                                            col = toCol
+                                            for rInc in INCs :
+                                                for colInc in INCs :
+                                                    toRow = row + rInc
+                                                    toCol = col + colInc
+                                                    jump = False
+                                                    if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                                        if (toCol in VALID_RANGE and toRow in VALID_RANGE and copyCB[toRow][toCol] == EMPTY ) :
+                                                            if (copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                                                jump = True
+                                                                copyCB[row][col] = 0
+                                                                copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                                                copyCB[toRow][toCol] = startPiece
+                                                                move += ":" + chr(toRow + 65) + str(toCol + 1)
                                         moves.append(move)
                                 else :
                                     moves.append(move)
@@ -295,6 +364,12 @@ def gameOver() :
     elif (darkCount == 0) :
         msg("Light player has won!", "success")
         return True
+    lightPlayer = getPossibles(1)
+    if (len(lightPlayer["jumps"]) == 0) and (len(lightPlayer["moves"]) == 0) :
+        darkPlayer = getPossibles(3)
+        if (len(darkPlayer["jumps"]) == 0) and (len(darkPlayer["moves"]) == 0) :
+            msg("Neither player can make a move, draw.", "success")
+            return True
     return False
 #I got tired of making my info messages pretty(ish)
 def msg(msg, typeM) :
@@ -303,13 +378,17 @@ def msg(msg, typeM) :
     else :
         print("SUCCESS - " + msg)
 #verification of moves
-def validMove(move, player):
+def validMove(move, player) :
+    if (move == False) :
+        msg("Cannot make a move, other player wins.", "success")
+        return False
     possibles = getPossibles(player)
-    if len(possibles["jumps"]) > 0:
+    if len(possibles["jumps"]) > 0 :
         if move not in possibles["jumps"] :
             msg("A jump must be taken!", "error")
             return False
     elif move not in possibles["moves"]: #includes crowning and blocking moves
+        print(move)
         msg("Invalid move!", "error")
         return False
     return True
@@ -388,6 +467,9 @@ def automatedMove(player) :
     for move in options :
         if move in possibles["crownings"] or move in possibles["blocks"] :
             ideal.append(move)
+        #If it is a multiple jump, I prefer it
+        if len(move) > 5 :
+            ideal = [move]
     #If I still haven't decided on a perfect move, just give me all the options
     if (len(ideal) == 0) :
         ideal = options
@@ -426,8 +508,13 @@ def automatedMove(player) :
         if not(popped) :
             i += 1
     #random for now, someday I will weight it based upon how the player could play against my move
-    index = random.randint(0, len(ideal) - 1)
-    return ideal[index]
+    if (debugger) :
+        print(ideal)
+    if (len(ideal) > 0) :
+        index = random.randint(0, len(ideal) - 1)
+        return ideal[index]
+    else :
+        return False
         
 #Where the magic happens!
 def checkers(t, size) :
