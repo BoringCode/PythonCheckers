@@ -442,8 +442,7 @@ def importGame() :
         CB.insert(4, [0, 0, 0, 0, 0, 0, 0, 0])
         print("Default board set up.")
     return currentPlayer
-
-#This is where the magic happens, I choose moves here
+#The smart one
 def automatedMove(player) :
     possibles = getPossibles(player)
     jumpIncs = [-2, 2]
@@ -515,7 +514,17 @@ def automatedMove(player) :
         return ideal[index]
     else :
         return False
-        
+#The dumb one
+def automatedMoveDumb(player) :
+    possibles = getPossibles(player)
+    if (len(possibles["jumps"]) > 0) :
+        option = possibles["jumps"]
+    elif (len(possibles["moves"]) > 0) :
+        option = possibles["moves"]
+    else :
+        return False
+    index = random.randint(0, len(option) - 1)
+    return option[index]
 #Where the magic happens!
 def checkers(t, size) :
     currentPlayer = importGame()
@@ -526,10 +535,11 @@ def checkers(t, size) :
     updateState()
     if (currentPlayer == "white") :
         player = 1
+        move = automatedMove(player)
     else :
         player = 3
+        move = automatedMoveDumb(player)
     while not(gameOver()) :            
-        move = automatedMove(player)
         if (debugger == True) :
             print("About to move " + currentPlayer + " player - " + move)
             input("Press enter to continue... ")
@@ -543,8 +553,9 @@ def checkers(t, size) :
         if (player == 1) :
             player = 3
             currentPlayer = "black"
+            move = automatedMoveDumb(player)
         else :
             player = 1
             currentPlayer = "white"
-
+            move = automatedMove(player)
 checkers(t, size)
