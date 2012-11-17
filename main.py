@@ -5,7 +5,7 @@ t = cTurtle.Turtle()
 t.ht()
 t.up()
 
-runs = 10
+runs = 1000
 wins = {"light": 0, "dark": 0}
 
 #Game setup
@@ -582,7 +582,7 @@ def checkers(t, size) :
         player = 3
         if (debugger) :
             start = time.time()
-        move = automatedMove(player)
+        move = automatedMoveDumb(player)
         if (debugger) :
             print("Move execution:", time.time() - start)
     while not(gameOver()) :            
@@ -601,7 +601,7 @@ def checkers(t, size) :
             currentPlayer = "black"
             if (debugger) :
                 start = time.time()
-            move = automatedMove(player)
+            move = automatedMoveDumb(player)
             if (debugger) :
                 print("Move execution:", time.time() - start)
         else :
