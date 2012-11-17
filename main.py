@@ -1,19 +1,18 @@
 #Graphical stuff
 import cTurtle
 import random
-import time
 t = cTurtle.Turtle()
 t.ht()
 t.up()
 
-numRuns = 1
-wins = {"lightWins": 0, "darkWins": 0}
+runs = 10
+wins = {"light": 0, "dark": 0}
 
 #Game setup
 light = "white"
 dark = "#C40003"
 size = 60
-debugger = True
+debugger = False
 EMPTY = 0
 VALID_RANGE = range(8)
 
@@ -21,7 +20,7 @@ VALID_RANGE = range(8)
 CB = []
 
 #PLAYER CODE
-def getPossibles(player):
+def getPossibles(CB, player):
     possibles = {}
     #column checks
     incs = [-1, 1]
@@ -44,13 +43,11 @@ def getPossibles(player):
     #Next get all the possible jumps (2 row and 2 col diagonal moves that go over an opponent)
     possibles["jumps"] = findMoves(CB, player, playerPieces, opponentPieces, jumpInc, jumpIncs)
     #Calculate if there are any crownings in any of my moves or jumps
-    possibles["crownings"] = findCrownings(player, possibles["moves"] + possibles["jumps"])
+    possibles["crownings"] = findCrownings(CB, player, possibles["moves"] + possibles["jumps"])
     #Calculate if any of my jumps or moves can block the opponent from jumping
-    possibles["blocks"] = findBlocks(opponent, possibles["moves"] + possibles["jumps"])
-    if (debugger) :
-        print(possibles)
+    possibles["blocks"] = findBlocks(CB, opponent, possibles["moves"] + possibles["jumps"])
     return possibles
-def findBlocks(opponent, playerMoves) :
+def findBlocks(CB, opponent, playerMoves) :
     #Bascially I'm calling a block a move that prevents a jump, this means that a block can include moving away from the opponent.
     blocks = []
     jumpIncs = [-2, 2]
@@ -80,7 +77,7 @@ def findBlocks(opponent, playerMoves) :
                     #Hey, put it in the blocks list
                     blocks.append(playerMove)
     return blocks                 
-def findCrownings(player, moves) :
+def findCrownings(CB, player, moves) :
     crownings = []
     #Loop through all possible moves (including jumps)
     for move in moves :
@@ -94,22 +91,6 @@ def findCrownings(player, moves) :
                 if (player == 3 and subMove[0] == "A") or (player == 1 and subMove[0] == "H") :
                     crownings.append(move)
     return crownings
-#Keep repetitive code to minimum
-def multiJump(copyCB, player, row, col, toRow, toCol, opponentPieces) :
-    if (toCol in VALID_RANGE and toRow in VALID_RANGE and CB[toRow][toCol] == EMPTY ) :
-        #Detect a jump
-        if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
-            #Is a valid jump?
-            if (CB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
-                jump = True
-                king = False
-                if (player == 1 and toRow == 7) or (player == 3 and toRow == 0) :
-                    king = True
-                nextRow = toRow
-                nextCol = toCol
-                move = ":" + chr(toRow + 65) + str(toCol + 1)
-                return [jump, king, move]
-    return [False]
 def findMoves(CB, player, playerPieces, opponentPieces, rowInc, INCs) :
     moves=[]
     #process all board positions
@@ -124,54 +105,44 @@ def findMoves(CB, player, playerPieces, opponentPieces, rowInc, INCs) :
                         #Basic check to make sure the move is valid
                         if (toCol in VALID_RANGE and toRow in VALID_RANGE and CB[toRow][toCol] == EMPTY ) :
                             #Detect a jump
-                            result = multiJump(CB, player, row, col, toRow, toCol, opponentPieces)
-                            jump = result[0]
-                            if (jump) :
-                                #The jump is good!
-                                copyCB = copyList(CB)
-                                startPiece = copyCB[row][col]
-                                copyCB[row][col] = 0
-                                copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
-                                copyCB[toRow][toCol] = startPiece
-                                king = result[1]
-                                nextRow = toRow
-                                nextCol = toCol
-                                #While I can still jump, continue to search for a new jump (multi jumps)
-                                while (jump) :
-                                    #Multi jumps
-                                    row = nextRow
-                                    col = nextCol
-                                    if (king) :
-                                        for rInc in INCs :
-                                            for colInc in INCs :
-                                                toRow = row + rInc
-                                                toCol = col + colInc
-                                                result = multiJump(copyCB, player, row, col, toRow, toCol, opponentPieces)
-                                                jump = result[0]
-                                                if (jump) :
-                                                    nextRow = toRow
-                                                    nextCol = toCol
-                                                    copyCB[row][col] = 0
-                                                    copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
-                                                    copyCB[toRow][toCol] = startPiece
-                                                    move += result[2]
-                                    else :
+                            if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                #Is a valid jump?
+                                if (CB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                    #The jump is good!
+                                    copyCB = copyList(CB)
+                                    #set the game tracker
+                                    startPiece = copyCB[row][col]
+                                    copyCB[row][col] = 0
+                                    copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                    copyCB[toRow][toCol] = startPiece
+                                    newRow = toRow
+                                    newCol = toCol
+                                    jump = True
+                                    #While I can still jump, continue to search for a new jump (multi jumps)
+                                    while (jump) :
+                                        row = newRow
+                                        col = newCol
+                                        jump = False
                                         for colInc in INCs :
                                             toRow = row + rowInc
                                             toCol = col + colInc
-                                            result = multiJump(copyCB, player, row, col, toRow, toCol, opponentPieces)
-                                            jump = result[0]
-                                            if (jump) :
-                                                king = result[1]
-                                                nextRow = toRow
-                                                nextCol = toCol                                                
-                                                copyCB[row][col] = 0
-                                                copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
-                                                copyCB[toRow][toCol] = startPiece
-                                                move += result[2]                                   
-                                moves.append(move)
+                                            if (toCol in VALID_RANGE and toRow in VALID_RANGE and copyCB[toRow][toCol] == EMPTY ) :
+                                                #Detect a jump
+                                                if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                                    #Is a valid jump?
+                                                    if (copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                                        #set the game tracker
+                                                        startPiece = copyCB[row][col]
+                                                        copyCB[row][col] = 0
+                                                        copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                                        copyCB[toRow][toCol] = startPiece
+                                                        newRow = toRow
+                                                        newCol = toCol
+                                                        jump = True
+                                                        move += ":" + chr(newRow + 65) + str(newCol + 1)
+                                    moves.append(move)
                             #Not a jump? Okay, it must be a valid move. Continue.
-                            elif (rowInc not in [2, -2]) :
+                            else :
                                 moves.append(move)
                 else: #is a king
                     for rInc in INCs :
@@ -181,34 +152,40 @@ def findMoves(CB, player, playerPieces, opponentPieces, rowInc, INCs) :
                             move = str(chr(row + 65) + str(col + 1) + ":" + chr(toRow + 65) + str(toCol + 1))
                             if (toCol in VALID_RANGE and toRow in VALID_RANGE and CB[toRow][toCol] == EMPTY ) :
                                 #jump
-                                result = multiJump(CB, player, row, col, toRow, toCol, opponentPieces)
-                                jump = result[0]
-                                if (jump) :
-                                    #The jump is good!
-                                    copyCB = copyList(CB)
-                                    startPiece = copyCB[row][col]
-                                    copyCB[row][col] = 0
-                                    copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
-                                    copyCB[toRow][toCol] = startPiece
-                                    king = result[1]
-                                    nextRow = toRow
-                                    nextCol = toCol
-                                    while (jump) :
-                                        for rInc in INCs :
-                                            for colInc in INCs :
-                                                toRow = row + rInc
-                                                toCol = col + colInc
-                                                result = multiJump(copyCB, player, row, col, toRow, toCol, opponentPieces)
-                                                jump = result[0]
-                                                if (jump) :
-                                                    nextRow = toRow
-                                                    nextCol = toCol
-                                                    copyCB[row][col] = 0
-                                                    copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
-                                                    copyCB[toRow][toCol] = startPiece
-                                                    move += result[2]
-                                    moves.append(move)
-                                elif (rowInc not in [2, -2]) :
+                                if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                    if (CB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                        jump = True
+                                        copyCB = copyList(CB)
+                                        startPiece = copyCB[row][col]
+                                        copyCB[row][col] = 0
+                                        copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                        copyCB[toRow][toCol] = startPiece
+                                        newRow = toRow
+                                        newCol = toCol
+                                        while (jump) :
+                                            row = newRow
+                                            col = newCol
+                                            jump = False
+                                            for rInc in INCs :
+                                                for colInc in INCs :
+                                                    toRow = row + rInc
+                                                    toCol = col + colInc
+                                                    if (toCol in VALID_RANGE and toRow in VALID_RANGE and copyCB[toRow][toCol] == EMPTY ) :
+                                                        #Detect a jump
+                                                        if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                                            #Is a valid jump?
+                                                            if (copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                                                #set the game tracker
+                                                                startPiece = copyCB[row][col]
+                                                                copyCB[row][col] = 0
+                                                                copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                                                copyCB[toRow][toCol] = startPiece
+                                                                newRow = toRow
+                                                                newCol = toCol
+                                                                jump = True
+                                                                move += ":" + chr(newRow + 65) + str(newCol + 1)
+                                        moves.append(move)
+                                else :
                                     moves.append(move)
     return moves
 #ACTUAL GAME
@@ -317,7 +294,8 @@ def initialState(t, size) :
                     king = True
                 else :
                     king = False
-                drawPiece(t, x, y, size, color, king)
+                if (runs < 2) :
+                    drawPiece(t, x, y, size, color, king)
 def moveChecker(move) :
     t.tracer(False)
     king = False
@@ -329,7 +307,7 @@ def moveChecker(move) :
     currPiece = CB[currRow][currCol]
     for move in range(1, len(moves)) :
         #remove the current piece
-        if (numRuns < 2) :
+        if (runs < 2) :
             drawSquare(t, currX, currY, size, "#D18B47")
         CB[currRow][currCol] = 0
         #move the piece
@@ -342,7 +320,7 @@ def moveChecker(move) :
             CB[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2] = 0
             eraseY = getRow(chr((currRow + (evalRow - currRow) // 2) + 65))
             eraseX = getCol((currCol + 1) + ((evalCol - currCol) // 2))
-            if (numRuns < 2) :
+            if (runs < 2) :
                 drawSquare(t, eraseX, eraseY, size, "#D18B47")
         if currPiece == 1 or currPiece == 2 :
             color = light
@@ -355,7 +333,7 @@ def moveChecker(move) :
             if (evalRow == 0) or (currPiece == 4) :
                 currPiece = 4
                 king = True
-        if (numRuns < 2) :
+        if (runs < 2) :
             drawPiece(t, evalX, evalY, size, color, king)
         CB[evalRow][evalCol] = currPiece
         #I want to evaluate the current position next time
@@ -364,7 +342,8 @@ def moveChecker(move) :
         currY = evalY
         currX = evalX
         currPiece = CB[evalRow][evalCol]
-        updateState()
+        if (runs < 2) :
+            updateState()
 #I'm too lazy to type t.tracer(True)
 def updateState() :
     t.tracer(True)
@@ -380,25 +359,25 @@ def gameOver() :
                 darkCount += 1
     if (lightCount == 0) :
         msg("Dark player has won!", "success")
-        wins["darkWins"] += 1
+        wins["dark"] += 1
         return True
     elif (darkCount == 0) :
         msg("Light player has won!", "success")
-        wins["lightWins"] += 1
+        wins["light"] += 1
         return True
-    lightPlayer = getPossibles(1)
-    darkPlayer = getPossibles(3)
-    if (len(lightPlayer["jumps"]) == 0) and (len(lightPlayer["moves"]) == 0) and (len(darkPlayer["jumps"]) == 0) and (len(darkPlayer["moves"]) == 0) :
-            msg("Neither player can make a move, draw.", "success")
-            return True
-    elif (len(lightPlayer["jumps"]) == 0) and (len(lightPlayer["moves"]) == 0) :
-        msg("Light player can't make any moves, dark player wins!", "success")
-        wins["darkWins"] += 1
+    lightPlayer = getPossibles(CB, 1)
+    darkPlayer = getPossibles(CB, 3)
+    if (len(lightPlayer["jumps"]) + len(lightPlayer["moves"]) == 0) and (len(darkPlayer["jumps"]) + len(darkPlayer["moves"]) == 0) :
+        msg("Neither player can make a move, draw.", "success")
         return True
-    elif (len(darkPlayer["jumps"]) == 0) and (len(darkPlayer["moves"]) == 0) :
-        msg("Dark player can't make any moves, light player wins!", "success")
-        wins["lightWins"] += 1
+    elif (len(lightPlayer["jumps"]) + len(lightPlayer["moves"]) == 0) :
+        msg("Light player can't make a move, dark player wins!", "success")
+        wins["dark"] += 1
         return True
+    elif (len(darkPlayer["jumps"]) + len(darkPlayer["moves"]) == 0) :
+        msg("Dark player can't make a move, light player wins!", "success")
+        wins["light"] += 1
+        return True        
     return False
 #I got tired of making my info messages pretty(ish)
 def msg(msg, typeM) :
@@ -408,10 +387,7 @@ def msg(msg, typeM) :
         print("SUCCESS - " + msg)
 #verification of moves
 def validMove(move, player) :
-    if (move == False) :
-        msg("Cannot make a move, other player wins.", "success")
-        return False
-    possibles = getPossibles(player)
+    possibles = getPossibles(CB, player)
     if len(possibles["jumps"]) > 0 :
         if move not in possibles["jumps"] :
             msg("A jump must be taken!", "error")
@@ -435,7 +411,11 @@ def showBoard(CB) :
             print(CB[i][item], end=" ")
         print()
         row += 1
-def importGame(filename) :
+def importGame() :
+    if (runs < 2) :
+        filename = input("Enter a filename => ")
+    else :
+        filename = ""
     while filename[-4:] != ".txt" and filename != "" or filename == ".txt" :
         print("Invalid filename")
         filename = input("Enter a filename => ")
@@ -454,6 +434,7 @@ def importGame(filename) :
                         CB[-1].append(0)
             row += 1
         print("File imported.")
+        gamefile.close
     else :
         currentPlayer = "white"
         for team in range(1, 4, 2) :
@@ -470,44 +451,13 @@ def importGame(filename) :
         CB.insert(4, [0, 0, 0, 0, 0, 0, 0, 0])
         print("Default board set up.")
     return currentPlayer
-<<<<<<< HEAD
-=======
-def countPieces(CB, player) :
-    if (player == 1) :
-        pieces = [1, 2]
-    else :
-        pieces = [3, 4]
-    count = 0
-    for row in CB :
-        for col in row :
-            if (col in pieces) :
-                count += 1
-    return count
-#----------------------------------------------------------------------------
->>>>>>> Tried to create auto test environment.
 #The smart one
 def automatedMove(player) :
-    possibles = getPossibles(player)
-    jumpIncs = [-2, 2]
-    incs = [-1, 1]
+    possibles = getPossibles(CB, player)
     if player == 3 :
         opponent = 1
-        opponentPieces = [1,2]
-        playerPieces= [3,4]
-        jumpInc = 2
-        rowInc = 1
-        playerJumpInc = -2
-        playerRowInc = -1
-        crowningRow = "A"
     else :
         opponent = 3
-        opponentPieces = [3,4]
-        playerPieces = [1,2]
-        rowInc = -1
-        jumpInc = -2
-        playerJumpInc = 2
-        playerRowInc = 1
-        crowningRow = "H"
     ideal = []
     #Jumps are required, so if there are jumps those are my only options
     if (len(possibles["jumps"]) > 0) :
@@ -518,94 +468,91 @@ def automatedMove(player) :
     for move in options :
         if move in possibles["crownings"] or move in possibles["blocks"] :
             ideal.append(move)
-        #If it is a multiple jump, I prefer it
-        if len(move) > 5 :
-            nope = False
-            #if there is another, better multiple jump. I want it.
-            for jump in move :
-                if (len(jump) > len(move)) :
-                    nope = True
-            if not(nope) :
-                ideal = [move]
     #If I still haven't decided on a perfect move, just give me all the options
     if (len(ideal) == 0) :
-        ideal = options    
+        ideal = options
     #Okay, I've decided on my best bet so far (jumps, crownings, blocks)
     #Now I need to actually think ahead, see around corners
     #Pick some moves, more advanced!
     i = 0
+    if (debugger) :
+        print("Current ideal options -", ideal)
     while (i < len(ideal)) :
-        #Check to make sure I can still remove moves from the ideal moves list
-        if (i < len(ideal)) and (len(ideal) > 1) :
+        if (len(ideal) != 1) :
+            moves = ideal[i].split(":")
             remove = False
             #Get a copy of the game tracker
             copyCB = copyList(CB)
             #Adjust the game tracker
-            currSquare = copyCB[getRow(ideal[i][0], False)][getCol(ideal[i][1], False)]
-            copyCB[getRow(ideal[i][-2], False)][getCol(ideal[i][-1], False)] = currSquare
-            copyCB[getRow(ideal[i][0], False)][getCol(ideal[i][1], False)] = 0
+            currRow = getRow(moves[0][0], False)
+            currCol = getCol(moves[0][1], False)
+            currSquare = copyCB[currRow][currCol]
+            for move in range(1, len(moves)) :
+                toRow = getRow(moves[move][0], False)
+                toCol = getCol(moves[move][1], False)
+                copyCB[currRow][currCol] = 0
+                if (abs(toRow - currRow) == 2) and (abs(toCol - currCol) == 2) :
+                    copyCB[toRow + (currRow - toRow) // 2][toCol + (currCol - toCol) // 2] = 0
+                if (toRow in [0, 7]) :
+                    currSquare = player + 1
+                copyCB[toRow][toCol] = currSquare
+                currRow = toRow
+                currCol = toCol
+            #Finished adjusting game tracker, let's get down to business
             #Get the opponent moves
-            opponentMoves = findMoves(copyCB, opponent, opponentPieces, playerPieces, rowInc, incs)
-            opponentJumps = findMoves(copyCB, opponent, opponentPieces, playerPieces, jumpInc, jumpIncs)
-            print(opponentJumps)
-            crownings = findCrownings(opponent, opponentMoves + opponentJumps)
-            #check the jumps
-            if (len(opponentJumps) > 0) :
-                for jump in opponentJumps :
-                    subJumps = jump.split(":")
-                    currRow = getRow(subJumps[0][0], False)
-                    currCol = getCol(subJumps[0][1], False)
-                    #Loop through each jump the opponent could make
-                    for subJump in range(1, len(subJumps)) :
-                        evalRow = getRow(subJumps[subJump][0], False)
-                        evalCol = getCol(subJumps[subJump][1], False)
-                        #Check to see if making this move could result in a jump, or if moving would open up a block.
-                        if (copyCB[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2] == currSquare) or (copyCB[evalRow][evalCol] == currSquare) :
-                                remove = True
+            opponentPossibles = getPossibles(copyCB, opponent)
+            #print(opponentPossibles)
+            for jump in opponentPossibles["jumps"] :
+                #If my jump is better then his, leave it in.
+                if (len(ideal[i]) > len(jump)) :
+                    remove = False
+                else :
+                    movesOp = jump.split(":")
+                    currRowOp = getRow(movesOp[0][0], False)
+                    currColOp = getCol(movesOp[0][1], False)
+                    move = 1
+                    #efficency, only loop as many times as needed
+                    while (remove != True and move < len(moves)) :
+                        toRowOp = getRow(movesOp[move][0], False)
+                        toColOp = getCol(movesOp[move][1], False)
+                        #Check to make sure I'm not moving into a jump
+                        if (toRowOp + (currRowOp - toRowOp) // 2 == toRow) and (toColOp + (currColOp - toColOp) // 2 == toCol) :
+                            if (debugger) :
+                                print("Removing " + ideal[i] + " because it would be jumped - " + jump)
+                            remove = True
+                        #Check to make sure I'm not removing a block
+                        elif (toRowOp == getRow(moves[0][0], False) and toColOp == getCol(moves[0][1], False)) :
+                            if (debugger) :
+                                print("Removing " + ideal[i] + " because it would remove a block - " + jump)
+                            remove = True
+                        currRowOp = toRowOp
+                        currColOp = toColOp
+                        move += 1
             #check if moving would allow a crowning
-            if (len(crownings) > 0) :
-                for crowning in crownings :
-                    subMoves = crowning.split(":")
-                    #Is it a king?
-                    if (copyCB[getRow(subMoves[0][0], False)][getCol(subMoves[0][1], False)] != opponent + 1) :
-                        for subMove in range(1, len(subMoves)) :
-                            #block the crowning, don't move from this spot
-                            if (subMoves[subMove][0] == crowningRow) and (ideal[i][0] == crowningRow) :
-                                remove = True
-            #check to see if move will box me into a corner, no draws please.
-            if (countPieces(CB, player) == 1) :
-                copyCB = copyList(CB)
-                #Adjust the game tracker
-                currSquare = copyCB[getRow(ideal[i][0], False)][getCol(ideal[i][1], False)]
-                copyCB[getRow(ideal[i][-2], False)][getCol(ideal[i][-1], False)] = currSquare
-                copyCB[getRow(ideal[i][0], False)][getCol(ideal[i][1], False)] = 0
-                if (len(findMoves(copyCB, player, playerPieces, opponentPieces, playerRowInc, incs) + findMoves(copyCB, player, playerPieces, opponentPieces, playerJumpInc, jumpIncs)) == 0) :
+            crown = 0
+            while (remove != True and crown < len(opponentPossibles["crownings"])) :
+                if (opponentPossibles["crownings"][crown].find(moves[0][0] + moves[0][1]) != -1) :
+                    if (debugger) :
+                        print("Removing " + ideal[i] + " because it would allow a crowning - " + opponentPossibles["crownings"][crown])
                     remove = True
-            if not(remove) :
-                i += 1
-            else :
-                if (debugger) :
-                    print("I almost did this move:", ideal[i], " - strikes: ", strikes)
-                    print("There were these jumps:", opponentJumps)
-                    print("There were these crownings:", crownings)
+                crown += 1
+            if (remove) :
                 ideal.pop(i)
-        else :
+            else :
+                i += 1
+        else:
             i += 1
+    #random for now
     if (debugger) :
-        print("Ideal moves - ", ideal)
+        print("Ideal moves -", ideal)
     if (len(ideal) > 0) :
         index = random.randint(0, len(ideal) - 1)
         return ideal[index]
     else :
         return False
-<<<<<<< HEAD
-=======
-
-#---------------------------------------------
->>>>>>> Tried to create auto test environment.
 #The dumb one
 def automatedMoveDumb(player) :
-    possibles = getPossibles(player)
+    possibles = getPossibles(CB, player)
     if (len(possibles["jumps"]) > 0) :
         option = possibles["jumps"]
     elif (len(possibles["moves"]) > 0) :
@@ -614,72 +561,44 @@ def automatedMoveDumb(player) :
         return False
     index = random.randint(0, len(option) - 1)
     return option[index]
-<<<<<<< HEAD
-=======
-
-
->>>>>>> Tried to create auto test environment.
 #Where the magic happens!
 def checkers(t, size) :
-    if (numRuns < 2) :
-        filename = input("Enter a filename => ")
-    else :
-        filename = ""
-    currentPlayer = importGame(filename)
-    if (numRuns < 2) :
+    currentPlayer = importGame()
+    if (runs < 2) :
         drawCheckerBoard(t,-4*size,4*size,size)
     #draw the board based upon the game state
     initialState(t, size)
-    if (numRuns < 2) :
+    if (runs < 2) :
         labelBoard(t, size)
-    updateState()
+        updateState()
     if (currentPlayer == "white") :
         player = 1
-<<<<<<< HEAD
+        if (debugger) :
+            start = time.time()
         move = automatedMove(player)
+        if (debugger) :
+            print("Move execution:", time.time() - start)
     else :
         player = 3
-        move = automatedMoveDumb(player)
+        if (debugger) :
+            start = time.time()
+        move = automatedMove(player)
+        if (debugger) :
+            print("Move execution:", time.time() - start)
     while not(gameOver()) :            
         if (debugger == True) :
-=======
-        if (debugger) :
-            start = time.time()
-        move = automatedMove(player)
-        if (debugger) :
-            print("Move execution:", time.time() - start)
-    else :
-        player = 3
-        if (debugger) :
-            start = time.time()
-        move = automatedMove(player)
-        if (debugger) :
-            print("Move execution:", time.time() - start)
-    while not(gameOver()) :
-        if (debugger) :
-            print()
->>>>>>> Tried to create auto test environment.
             print("About to move " + currentPlayer + " player - " + move)
             input("Press enter to continue... ")
         if not(validMove(move, player)) :
             print("Invalid move, game over.")
             return
         moveChecker(move)
-        if (debugger) :
+        if (debugger == True) :
             showBoard(CB)
-            print()
         #switch the player for the next run through
         if (player == 1) :
             player = 3
             currentPlayer = "black"
-<<<<<<< HEAD
-            move = automatedMoveDumb(player)
-        else :
-            player = 1
-            currentPlayer = "white"
-            move = automatedMove(player)
-checkers(t, size)
-=======
             if (debugger) :
                 start = time.time()
             move = automatedMove(player)
@@ -693,13 +612,12 @@ checkers(t, size)
             move = automatedMove(player)
             if (debugger) :
                 print("Move execution:", time.time() - start)
-#Test case
-for i in range(numRuns) :
-    CB = []
+            
+for i in range(runs) :
     checkers(t, size)
-    showBoard(CB)
-print("Light won " + str(wins["lightWins"]) + " times.")
-print("Dark won " + str(wins["darkWins"]) + " times.")
-print("Light won " + str((wins["lightWins"] / numRuns) * 100) + "% of the time.")
-print("Dark won " + str((wins["darkWins"] / numRuns) * 100) + "% of the time.")
->>>>>>> Tried to create auto test environment.
+    CB = []
+if (runs > 1) :
+    print("Light player won " + str(wins["light"]) + " times.")
+    print("Dark player won " + str(wins["dark"]) + " times.")
+    print("Light player won " + str((wins["light"] / runs) * 100) + "% of the time.")
+    print("Dark player won " + str((wins["dark"] / runs) * 100) + "% of the time.")
