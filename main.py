@@ -6,7 +6,7 @@ t = cTurtle.Turtle()
 t.ht()
 t.up()
 
-runs = 10
+runs = 1
 wins = {"light": 0, "dark": 0}
 
 #Game setup
@@ -459,32 +459,36 @@ def automatedMove(player) :
         opponent = 1
     else :
         opponent = 3
-    ideal = []
     #Jumps are required, so if there are jumps those are my only options
     if (len(possibles["jumps"]) > 0) :
         options = possibles["jumps"]
     else :
         options = possibles["moves"]
-    #Okay, I prefer crownings and blocks.
-    for move in options :
-        if move in possibles["crownings"] or move in possibles["blocks"] :
-            ideal.append(move)
-    #If I still haven't decided on a perfect move, just give me all the options
-    if (len(ideal) == 0) :
-        ideal = options
-    #Okay, I've decided on my best bet so far (jumps, crownings, blocks)
+    #Okay, I've decided on my best bet so far (jumps or moves)
     #Now I need to actually think ahead, see around corners
     #Pick some moves, more advanced!
     i = 0
-    #each move is weighted, the move with the lowest weighting gets to go forward
+    #each move is weighted, the move(s) with the lowest weighting gets to go forward
     weighting = []
     if (debugger) :
-        print("Current ideal options -", ideal)
-    while (i < len(ideal)) :
-        if (len(ideal) != 1) :
+        print("Current options -", options)
+    #I only have one option, why bother checking to see if it is good?
+    if (len(options) != 1) :
+        for i in range(len(options)) :
+            if (debugger) :
+                print("Possible move -", options[i])
             weighting.append(0)
-            moves = ideal[i].split(":")
-            remove = False
+            #is the move a crowning or a block?
+            if options[i] in possibles["crownings"] :
+                weighting[-1] += -1
+                if (debugger) :
+                    print("Moving would result in a crowning, decreasing weighting by 1")
+            if (options[i] in possibles["blocks"]) :
+                weighting[-1] += -2
+                if (debugger) :
+                    print("Moving would result in a block, decreasing weighting by 2")
+            #Simulate the move in a copy of the game tracker
+            moves = options[i].split(":")
             #Get a copy of the game tracker
             copyCB = copyList(CB)
             #Adjust the game tracker
@@ -507,10 +511,15 @@ def automatedMove(player) :
             locations = []
             opponentPossibles = getPossibles(copyCB, opponent)
             #print(opponentPossibles)
+            if (debugger) :
+                if (len(opponentPossibles["jumps"]) > 0) :
+                    print("Possible jumps -", opponentPossibles["jumps"])
             for jump in opponentPossibles["jumps"] :
-                #If my jump is better then his, leave it in.
-                if (len(ideal[i]) > len(jump)) :
-                    weighting[-1] += -1
+                #If my jump is better then his, leave my jump in.
+                if (len(options[i]) > len(jump)) :
+                    weighting[-1] += -3
+                    if (debugger) :
+                        print("My jump is a better multiple jump, decreasing weighting by 3")
                 else :
                     movesOp = jump.split(":")
                     currRowOp = getRow(movesOp[0][0], False)
@@ -518,68 +527,158 @@ def automatedMove(player) :
                     locations.append([currRowOp, currColOp])
                     move = 1
                     #efficency, only loop as many times as needed
-                    while (remove != True and move < len(moves)) :
+                    while (move < len(moves)) :
                         toRowOp = getRow(movesOp[move][0], False)
                         toColOp = getCol(movesOp[move][1], False)
                         #Check to make sure I'm not moving into a jump
                         if (toRowOp + (currRowOp - toRowOp) // 2 == toRow) and (toColOp + (currColOp - toColOp) // 2 == toCol) :
-                            if (debugger) :
-                                print("Removing " + ideal[i] + " because it would be jumped - " + jump)
-                            remove = True
                             weighting[-1] += 3
+                            if (debugger) :
+                                print("Moving would allow a jump, increasing weighting by 3")
+                            #multi jump, weight it even higher because I would prefer a different move
+                            if (len(jump) > 5) :
+                                weighting[-1] += 2
+                                if (debugger) :
+                                    print("Moving would allow a multi jump, increasing weighting by 2")
+                            #king, I would prefer this not be jumped
+                            if (currSquare in [2, 4]) :
+                                weighting[-1] += 1
+                                if (debugger) :
+                                    print("Piece is a king and could be jumped during this move, increasing weighting by 1")
+                        #remove some weighting if my current location could be jumped, this gives precedence
+                        if (toRowOp + (currRowOp - toRowOp) // 2 == getRow(moves[0][0], False)) and (toColOp + (currColOp - toColOp) // 2 == getRow(moves[0][1], False)) :
+                            weighting[-1] += -1
                         #Check to make sure I'm not removing a block
-                        elif (toRowOp == getRow(moves[0][0], False) and toColOp == getCol(moves[0][1], False)) :
-                            if (debugger) :
-                                print("Removing " + ideal[i] + " because it would remove a block - " + jump)
-                            remove = True
-                            weighting[-1] += 3
+                        if (toRowOp == getRow(moves[0][0], False) and toColOp == getCol(moves[0][1], False)) :
+                            #check to see if jumped piece is one of my other pieces
+                            if (toRowOp + (currRowOp - toRowOp) // 2 != toRow) and (toColOp + (currColOp - toColOp) // 2 != toCol) :
+                                weighting[-1] += 3
+                                if (debugger) :
+                                    print("Piece is blocking a jump, increasing weighting by 3")
+                                #multi jump, weight it even higher because I would prefer a different move
+                                if (len(jump) > 5) :
+                                    weighting[-1] += 2
+                                    if (debugger) :
+                                        print("Removing this block would allow a multi jump, increasing weighting by 2")
                         currRowOp = toRowOp
                         currColOp = toColOp
                         move += 1
             #check if moving would allow a crowning
-            crown = 0
-            while (remove != True and crown < len(opponentPossibles["crownings"])) :
-                if (opponentPossibles["crownings"][crown].find(moves[0][0] + moves[0][1]) != -1) :
-                    if (debugger) :
-                        print("Removing " + ideal[i] + " because it would allow a crowning - " + opponentPossibles["crownings"][crown])
-                    remove = True
+            if (debugger) :
+                if (len(opponentPossibles["crownings"]) > 0) :
+                    print("Possible crownings -", opponentPossibles["crownings"])
+            for crown in opponentPossibles["crownings"] :
+                if (crown.find(moves[0][0] + moves[0][1]) != -1) :
                     weighting[-1] += 2
-                crown += 1
+                    if (debugger) :
+                        print("Moving would allow an opponent crowning, increasing weighting by 2")
             #Basic path finding, move in direction of nearest piece
-            if (ideal[i] in possibles["moves"] and ideal[i] not in possibles["blocks"]) :
+            if (options[i] in possibles["moves"] and options[i] not in possibles["blocks"]) :
                 for move in opponentPossibles["moves"] :
                     locations.append([getRow(move[0], False), getCol(move[1], False)])
-                closest = [locations[0][0], locations[0][1]]
-                #get the closest piece
-                for location in locations :
-                    if (location[0] != getRow(moves[0][0], False)) :
-                        rowDiff = abs(location[0] - getRow(moves[0][0], False))
-                        if (rowDiff <= abs(closest[0] - getRow(moves[0][0], False))) :
-                            closest[0] = location[0]
-                        colDiff = abs(location[1] - getCol(moves[0][1], False))
-                        if (colDiff <= abs(closest[1] - getCol(moves[0][1], False))) :
-                            closest[1] = location[1]
-                if (closest[0] > getRow(moves[0][0], False) and (getRow(moves[0][0], False) - getRow(moves[-1][0], False) > 0)) or (closest[0] < getRow(moves[0][0], False) and (getRow(moves[0][0], False) - getRow(moves[-1][0], False) < 0)) :
-                    remove = True
-                    weighting[-1] += 1
-                    if (debugger) :
-                        print("Removing " + ideal[i] + " because it is moving away from the nearest piece")
-                    #Detect moving a column
-                    #if (closest[1] >= getCol(moves[-1][1], False) and (getCol(moves[0][1], False) - getCol(moves[-1][1], False) > 0)) or (closest[1] >= getCol(moves[-1][1], False) and (getCol(moves[0][1], False) - getCol(moves[-1][1], False) < 0)) :
-        i += 1
+                if (len(locations) > 0) :
+                    closest = [locations[0][0], locations[0][1]]
+                    #get the closest piece
+                    for location in locations :
+                        #is this piece jumpable?
+                        if (location[0] not in [0, 7]) and (location[1] not in [0, 7]) :
+                            if (location[0] != getRow(moves[0][0], False)) :
+                                rowDiff = abs(location[0] - getRow(moves[0][0], False))
+                                if (rowDiff <= abs(closest[0] - getRow(moves[0][0], False))) :
+                                    closest[0] = location[0]
+                                colDiff = abs(location[1] - getCol(moves[0][1], False))
+                                if (colDiff <= abs(closest[1] - getCol(moves[0][1], False))) :
+                                    closest[1] = location[1]
+                    if (closest[0] > getRow(moves[0][0], False) and (getRow(moves[0][0], False) - getRow(moves[-1][0], False) > 0)) or (closest[0] < getRow(moves[0][0], False) and (getRow(moves[0][0], False) - getRow(moves[-1][0], False) < 0)) :
+                        weighting[-1] += 1
+                        if (debugger) :
+                            print("Piece is moving row away from nearest piece, increasing weighting by 1")
+                        #Detect moving a column
+                        if (closest[1] >= getCol(moves[-1][1], False) and (getCol(moves[0][1], False) - getCol(moves[-1][1], False) > 0)) or (closest[1] >= getCol(moves[-1][1], False) and (getCol(moves[0][1], False) - getCol(moves[-1][1], False) < 0)) :
+                            weighting[-1] += 1
+                            if (debugger) :
+                                print("Piece is moving col away from nearest piece, increasing weighting by 1")
+            if (debugger) :
+                print()
     final = []
     if (len(weighting) != 0) :
+        if (debugger) :
+            print("Weighting -", weighting)
         for i in range(len(weighting)) :
             if (weighting[i] == min(weighting)) :
-                final.append(ideal[i])
+                final.append(options[i])
     else :
-        final = ideal
+        final = options
     #random for now
     if (debugger) :
         print("Ideal moves -", final)
     if (len(final) > 0) :
         index = random.randint(0, len(final) - 1)
         return final[index]
+    else :
+        return False
+
+#The slightly smarter one
+def automatedMoveSmartish(player) :
+    possibles = getPossibles(CB, player)
+    jumpIncs = [-2, 2]
+    if player == 3 :
+        opponent = 1
+        opponentPieces = [1,2]
+        playerPieces= [3,4]
+        jumpInc = 2
+    else :
+        opponent = 3
+        opponentPieces = [3,4]
+        playerPieces = [1,2]
+        jumpInc = -2
+    ideal = []
+    #Jumps are required, so if there are jumps those are my only options
+    if (len(possibles["jumps"]) > 0) :
+        options = possibles["jumps"]
+    else :
+        options = possibles["moves"]
+    #Okay, I prefer crownings and blocks.
+    for move in options :
+        if move in possibles["crownings"] or move in possibles["blocks"] :
+            ideal.append(move)
+    #If I still haven't decided on a perfect move, just give me all the options
+    if (len(ideal) == 0) :
+        ideal = options
+    #Okay, I've decided on my best bet so far (jumps, crownings, blocks)
+    #Now I need to actually think ahead, see around corners
+    #Pick some moves, more advanced!
+    i = 0
+    while (i < len(ideal)) :
+        popped = False
+        #Get a copy of the game tracker
+        copyCB = copyList(CB)
+        #Adjust the game tracker
+        currSquare = copyCB[getRow(ideal[i][0], False)][getCol(ideal[i][1], False)]
+        copyCB[getRow(ideal[i][-2], False)][getCol(ideal[i][-1], False)] = currSquare
+        copyCB[getRow(ideal[i][0], False)][getCol(ideal[i][1], False)] = 0
+        #Get the opponent jumps
+        opponentJumps = findMoves(copyCB, opponent, opponentPieces, playerPieces, jumpInc, jumpIncs)
+        for jump in opponentJumps :
+            subJumps = jump.split(":")
+            currRow = getRow(subJumps[0][0], False)
+            currCol = getCol(subJumps[0][1], False)
+            #Loop through each jump the opponent could make
+            for subJump in range(1, len(subJumps)) :
+                evalRow = getRow(subJumps[subJump][0], False)
+                evalCol = getCol(subJumps[subJump][1], False)
+                #I don't like this move, remove it.
+                if (copyCB[currRow + (evalRow - currRow) // 2][currCol + (evalCol - currCol) // 2] == currSquare) and (i < len(ideal)) and (len(ideal) > 1) :
+                    ideal.pop(i)
+                    popped = True
+                currRow = evalRow
+                currCol = evalCol
+        if not(popped) :
+            i += 1
+    #random for now, someday I will weight it based upon how the player could play against my move
+    if (len(ideal) > 0) :
+        index = random.randint(0, len(ideal) - 1)
+        return ideal[index]
     else :
         return False
 #The dumb one
@@ -614,7 +713,7 @@ def checkers(t, size) :
         player = 3
         if (debugger) :
             start = time.time()
-        move = automatedMove(player)
+        move = automatedMoveSmartish(player)
         if (debugger) :
             print("Move execution:", time.time() - start)
     while not(gameOver()) :            
@@ -627,13 +726,14 @@ def checkers(t, size) :
         moveChecker(move)
         if (debugger == True) :
             showBoard(CB)
+            print()
         #switch the player for the next run through
         if (player == 1) :
             player = 3
             currentPlayer = "black"
             if (debugger) :
                 start = time.time()
-            move = automatedMove(player)
+            move = automatedMoveSmartish(player)
             if (debugger) :
                 print("Move execution:", time.time() - start)
         else :
