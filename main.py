@@ -1,11 +1,12 @@
 #Graphical stuff
 import cTurtle
 import random
+import time
 t = cTurtle.Turtle()
 t.ht()
 t.up()
 
-runs = 1000
+runs = 10
 wins = {"light": 0, "dark": 0}
 
 #Game setup
@@ -475,10 +476,13 @@ def automatedMove(player) :
     #Now I need to actually think ahead, see around corners
     #Pick some moves, more advanced!
     i = 0
+    #each move is weighted, the move with the lowest weighting gets to go forward
+    weighting = []
     if (debugger) :
         print("Current ideal options -", ideal)
     while (i < len(ideal)) :
         if (len(ideal) != 1) :
+            weighting.append(0)
             moves = ideal[i].split(":")
             remove = False
             #Get a copy of the game tracker
@@ -500,16 +504,18 @@ def automatedMove(player) :
                 currCol = toCol
             #Finished adjusting game tracker, let's get down to business
             #Get the opponent moves
+            locations = []
             opponentPossibles = getPossibles(copyCB, opponent)
             #print(opponentPossibles)
             for jump in opponentPossibles["jumps"] :
                 #If my jump is better then his, leave it in.
                 if (len(ideal[i]) > len(jump)) :
-                    remove = False
+                    weighting[-1] += -1
                 else :
                     movesOp = jump.split(":")
                     currRowOp = getRow(movesOp[0][0], False)
                     currColOp = getCol(movesOp[0][1], False)
+                    locations.append([currRowOp, currColOp])
                     move = 1
                     #efficency, only loop as many times as needed
                     while (remove != True and move < len(moves)) :
@@ -520,11 +526,13 @@ def automatedMove(player) :
                             if (debugger) :
                                 print("Removing " + ideal[i] + " because it would be jumped - " + jump)
                             remove = True
+                            weighting[-1] += 3
                         #Check to make sure I'm not removing a block
                         elif (toRowOp == getRow(moves[0][0], False) and toColOp == getCol(moves[0][1], False)) :
                             if (debugger) :
                                 print("Removing " + ideal[i] + " because it would remove a block - " + jump)
                             remove = True
+                            weighting[-1] += 3
                         currRowOp = toRowOp
                         currColOp = toColOp
                         move += 1
@@ -535,19 +543,43 @@ def automatedMove(player) :
                     if (debugger) :
                         print("Removing " + ideal[i] + " because it would allow a crowning - " + opponentPossibles["crownings"][crown])
                     remove = True
+                    weighting[-1] += 2
                 crown += 1
-            if (remove) :
-                ideal.pop(i)
-            else :
-                i += 1
-        else:
-            i += 1
+            #Basic path finding, move in direction of nearest piece
+            if (ideal[i] in possibles["moves"] and ideal[i] not in possibles["blocks"]) :
+                for move in opponentPossibles["moves"] :
+                    locations.append([getRow(move[0], False), getCol(move[1], False)])
+                closest = [locations[0][0], locations[0][1]]
+                #get the closest piece
+                for location in locations :
+                    if (location[0] != getRow(moves[0][0], False)) :
+                        rowDiff = abs(location[0] - getRow(moves[0][0], False))
+                        if (rowDiff <= abs(closest[0] - getRow(moves[0][0], False))) :
+                            closest[0] = location[0]
+                        colDiff = abs(location[1] - getCol(moves[0][1], False))
+                        if (colDiff <= abs(closest[1] - getCol(moves[0][1], False))) :
+                            closest[1] = location[1]
+                if (closest[0] > getRow(moves[0][0], False) and (getRow(moves[0][0], False) - getRow(moves[-1][0], False) > 0)) or (closest[0] < getRow(moves[0][0], False) and (getRow(moves[0][0], False) - getRow(moves[-1][0], False) < 0)) :
+                    remove = True
+                    weighting[-1] += 1
+                    if (debugger) :
+                        print("Removing " + ideal[i] + " because it is moving away from the nearest piece")
+                    #Detect moving a column
+                    #if (closest[1] >= getCol(moves[-1][1], False) and (getCol(moves[0][1], False) - getCol(moves[-1][1], False) > 0)) or (closest[1] >= getCol(moves[-1][1], False) and (getCol(moves[0][1], False) - getCol(moves[-1][1], False) < 0)) :
+        i += 1
+    final = []
+    if (len(weighting) != 0) :
+        for i in range(len(weighting)) :
+            if (weighting[i] == min(weighting)) :
+                final.append(ideal[i])
+    else :
+        final = ideal
     #random for now
     if (debugger) :
-        print("Ideal moves -", ideal)
-    if (len(ideal) > 0) :
-        index = random.randint(0, len(ideal) - 1)
-        return ideal[index]
+        print("Ideal moves -", final)
+    if (len(final) > 0) :
+        index = random.randint(0, len(final) - 1)
+        return final[index]
     else :
         return False
 #The dumb one
@@ -582,7 +614,7 @@ def checkers(t, size) :
         player = 3
         if (debugger) :
             start = time.time()
-        move = automatedMoveDumb(player)
+        move = automatedMove(player)
         if (debugger) :
             print("Move execution:", time.time() - start)
     while not(gameOver()) :            
@@ -601,7 +633,7 @@ def checkers(t, size) :
             currentPlayer = "black"
             if (debugger) :
                 start = time.time()
-            move = automatedMoveDumb(player)
+            move = automatedMove(player)
             if (debugger) :
                 print("Move execution:", time.time() - start)
         else :
