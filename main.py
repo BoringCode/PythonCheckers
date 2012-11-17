@@ -16,6 +16,7 @@ size = 60
 debugger = False
 EMPTY = 0
 VALID_RANGE = range(8)
+maxMoves = 10000
 
 #The game tracker
 CB = []
@@ -480,11 +481,11 @@ def automatedMove(player) :
             weighting.append(0)
             #is the move a crowning or a block?
             if options[i] in possibles["crownings"] :
-                weighting[-1] += -1
+                weighting[-1] += -2
                 if (debugger) :
                     print("Moving would result in a crowning, decreasing weighting by 1")
             if (options[i] in possibles["blocks"]) :
-                weighting[-1] += -2
+                weighting[-1] += -3
                 if (debugger) :
                     print("Moving would result in a block, decreasing weighting by 2")
             #Simulate the move in a copy of the game tracker
@@ -506,9 +507,13 @@ def automatedMove(player) :
                 copyCB[toRow][toCol] = currSquare
                 currRow = toRow
                 currCol = toCol
+            #If I'm moving to a "safe" spot, prefer it
+            if (currCol in [0, 7]) :
+                weighting[-1] += -2
+                if (debugger) :
+                    print("Moving would move to a safe spot, decreasing weighting by 2")
             #Finished adjusting game tracker, let's get down to business
             #Get the opponent moves
-            locations = []
             opponentPossibles = getPossibles(copyCB, opponent)
             #print(opponentPossibles)
             if (debugger) :
@@ -524,10 +529,7 @@ def automatedMove(player) :
                     movesOp = jump.split(":")
                     currRowOp = getRow(movesOp[0][0], False)
                     currColOp = getCol(movesOp[0][1], False)
-                    locations.append([currRowOp, currColOp])
-                    move = 1
-                    #efficency, only loop as many times as needed
-                    while (move < len(moves)) :
+                    for move in range(len(moves)) :
                         toRowOp = getRow(movesOp[move][0], False)
                         toColOp = getCol(movesOp[move][1], False)
                         #Check to make sure I'm not moving into a jump
@@ -551,7 +553,7 @@ def automatedMove(player) :
                         #Check to make sure I'm not removing a block
                         if (toRowOp == getRow(moves[0][0], False) and toColOp == getCol(moves[0][1], False)) :
                             #check to see if jumped piece is one of my other pieces
-                            if (toRowOp + (currRowOp - toRowOp) // 2 != toRow) and (toColOp + (currColOp - toColOp) // 2 != toCol) :
+                            if (toRowOp + (currRowOp - toRowOp) // 2 != toRow) or (toColOp + (currColOp - toColOp) // 2 != toCol) :
                                 weighting[-1] += 3
                                 if (debugger) :
                                     print("Piece is blocking a jump, increasing weighting by 3")
@@ -562,7 +564,6 @@ def automatedMove(player) :
                                         print("Removing this block would allow a multi jump, increasing weighting by 2")
                         currRowOp = toRowOp
                         currColOp = toColOp
-                        move += 1
             #check if moving would allow a crowning
             if (debugger) :
                 if (len(opponentPossibles["crownings"]) > 0) :
@@ -573,16 +574,18 @@ def automatedMove(player) :
                     if (debugger) :
                         print("Moving would allow an opponent crowning, increasing weighting by 2")
             #Basic path finding, move in direction of nearest piece
-            if (options[i] in possibles["moves"] and options[i] not in possibles["blocks"]) :
-                for move in opponentPossibles["moves"] :
-                    locations.append([getRow(move[0], False), getCol(move[1], False)])
+            if (options[i] in possibles["moves"] and options[i] not in possibles["blocks"] and currSquare == player + 1) :
+                locations = []
+                for row in VALID_RANGE :
+                    for col in VALID_RANGE :
+                        if (CB[row][col] in [opponent, opponent + 1]) :
+                            locations.append([row, col])
                 if (len(locations) > 0) :
                     closest = [locations[0][0], locations[0][1]]
                     #get the closest piece
                     for location in locations :
                         #is this piece jumpable?
                         if (location[0] not in [0, 7]) and (location[1] not in [0, 7]) :
-                            if (location[0] != getRow(moves[0][0], False)) :
                                 rowDiff = abs(location[0] - getRow(moves[0][0], False))
                                 if (rowDiff <= abs(closest[0] - getRow(moves[0][0], False))) :
                                     closest[0] = location[0]
@@ -716,7 +719,8 @@ def checkers(t, size) :
         move = automatedMoveSmartish(player)
         if (debugger) :
             print("Move execution:", time.time() - start)
-    while not(gameOver()) :            
+    moves = 0
+    while not(gameOver()) and moves < maxMoves:            
         if (debugger == True) :
             print("About to move " + currentPlayer + " player - " + move)
             input("Press enter to continue... ")
@@ -744,8 +748,12 @@ def checkers(t, size) :
             move = automatedMove(player)
             if (debugger) :
                 print("Move execution:", time.time() - start)
+        moves += 1
+    if (moves >= maxMoves) :
+        msg("Max number of moves reached, neither player wins.", "success")
             
 for i in range(runs) :
+    print("Run #" + str(i))
     checkers(t, size)
     CB = []
 if (runs > 1) :
