@@ -6,14 +6,14 @@ t = cTurtle.Turtle()
 t.ht()
 t.up()
 
-runs = 1
+runs = 100
 wins = {"light": 0, "dark": 0}
 
 #Game setup
 light = "white"
 dark = "#C40003"
 size = 60
-debugger = True
+debugger = False
 EMPTY = 0
 VALID_RANGE = range(8)
 maxMoves = 10000
@@ -77,7 +77,8 @@ def findBlocks(CB, opponent, playerMoves) :
                 #check if final resting place of this move is also the finishing location of the jump
                 if playerMove[-2:] == moves[i] :
                     #Hey, put it in the blocks list
-                    blocks.append(playerMove)
+                    if (playerMove not in blocks) :
+                        blocks.append(playerMove)
     return blocks                 
 def findCrownings(CB, player, moves) :
     crownings = []
@@ -91,7 +92,8 @@ def findCrownings(CB, player, moves) :
             for subMove in subMoves :
                 #If the player is red (black) and has just landed on the A row, king it. If player is white and has landed on the H row, king it.
                 if (player == 3 and subMove[0] == "A") or (player == 1 and subMove[0] == "H") :
-                    crownings.append(move)
+                    if (move not in crownings) :
+                        crownings.append(move)
     return crownings
 def findMoves(CB, player, playerPieces, opponentPieces, rowInc, INCs) :
     moves=[]
