@@ -13,7 +13,7 @@ wins = {"light": 0, "dark": 0}
 light = "white"
 dark = "#C40003"
 size = 60
-debugger = False
+debugger = True
 EMPTY = 0
 VALID_RANGE = range(8)
 maxMoves = 10000
@@ -126,22 +126,24 @@ def findMoves(CB, player, playerPieces, opponentPieces, rowInc, INCs) :
                                         col = newCol
                                         jump = False
                                         for colInc in INCs :
-                                            toRow = row + rowInc
-                                            toCol = col + colInc
-                                            if (toCol in VALID_RANGE and toRow in VALID_RANGE and copyCB[toRow][toCol] == EMPTY ) :
-                                                #Detect a jump
-                                                if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
-                                                    #Is a valid jump?
-                                                    if (copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
-                                                        #set the game tracker
-                                                        startPiece = copyCB[row][col]
-                                                        copyCB[row][col] = 0
-                                                        copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
-                                                        copyCB[toRow][toCol] = startPiece
-                                                        newRow = toRow
-                                                        newCol = toCol
-                                                        jump = True
-                                                        move += ":" + chr(newRow + 65) + str(newCol + 1)
+                                            #if there are multiple directions to go, I want only the first one
+                                            if not(jump) :
+                                                toRow = row + rowInc
+                                                toCol = col + colInc
+                                                if (toCol in VALID_RANGE and toRow in VALID_RANGE and copyCB[toRow][toCol] == EMPTY ) :
+                                                    #Detect a jump
+                                                    if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                                        #Is a valid jump?
+                                                        if (copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                                            #set the game tracker
+                                                            startPiece = copyCB[row][col]
+                                                            copyCB[row][col] = 0
+                                                            copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                                            copyCB[toRow][toCol] = startPiece
+                                                            newRow = toRow
+                                                            newCol = toCol
+                                                            jump = True
+                                                            move += ":" + chr(newRow + 65) + str(newCol + 1)
                                     moves.append(move)
                             #Not a jump? Okay, it must be a valid move. Continue.
                             else :
@@ -170,22 +172,23 @@ def findMoves(CB, player, playerPieces, opponentPieces, rowInc, INCs) :
                                             jump = False
                                             for rInc in INCs :
                                                 for colInc in INCs :
-                                                    toRow = row + rInc
-                                                    toCol = col + colInc
-                                                    if (toCol in VALID_RANGE and toRow in VALID_RANGE and copyCB[toRow][toCol] == EMPTY ) :
-                                                        #Detect a jump
-                                                        if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
-                                                            #Is a valid jump?
-                                                            if (copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
-                                                                #set the game tracker
-                                                                startPiece = copyCB[row][col]
-                                                                copyCB[row][col] = 0
-                                                                copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
-                                                                copyCB[toRow][toCol] = startPiece
-                                                                newRow = toRow
-                                                                newCol = toCol
-                                                                jump = True
-                                                                move += ":" + chr(newRow + 65) + str(newCol + 1)
+                                                    if not(jump) :
+                                                        toRow = row + rInc
+                                                        toCol = col + colInc
+                                                        if (toCol in VALID_RANGE and toRow in VALID_RANGE and copyCB[toRow][toCol] == EMPTY ) :
+                                                            #Detect a jump
+                                                            if (abs(toRow - row) == 2) and (abs(toCol - col) == 2) :
+                                                                #Is a valid jump?
+                                                                if (copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] in opponentPieces) :
+                                                                    #set the game tracker
+                                                                    startPiece = copyCB[row][col]
+                                                                    copyCB[row][col] = 0
+                                                                    copyCB[toRow + (row - toRow) // 2][toCol + (col - toCol) // 2] = 0
+                                                                    copyCB[toRow][toCol] = startPiece
+                                                                    newRow = toRow
+                                                                    newCol = toCol
+                                                                    jump = True
+                                                                    move += ":" + chr(newRow + 65) + str(newCol + 1)
                                         moves.append(move)
                                 else :
                                     moves.append(move)
@@ -488,6 +491,11 @@ def automatedMove(player) :
                 weighting[-1] += -3
                 if (debugger) :
                     print("Moving would result in a block, decreasing weighting by 2")
+            #Multi jumps
+            if (len(options[i]) > 5) :
+                weighting[-1] += -1
+                if (debugger) :
+                    print("Multi jump, decreasing weighting by 1")
             #Simulate the move in a copy of the game tracker
             moves = options[i].split(":")
             #Get a copy of the game tracker
@@ -496,6 +504,7 @@ def automatedMove(player) :
             currRow = getRow(moves[0][0], False)
             currCol = getCol(moves[0][1], False)
             currSquare = copyCB[currRow][currCol]
+            origSquare = currSquare
             for move in range(1, len(moves)) :
                 toRow = getRow(moves[move][0], False)
                 toCol = getCol(moves[move][1], False)
@@ -574,7 +583,7 @@ def automatedMove(player) :
                     if (debugger) :
                         print("Moving would allow an opponent crowning, increasing weighting by 2")
             #Basic path finding, move in direction of nearest piece
-            if (options[i] in possibles["moves"] and options[i] not in possibles["blocks"] and currSquare == player + 1) :
+            if (options[i] in possibles["moves"] and options[i] not in possibles["blocks"] and origSquare == player + 1) :
                 locations = []
                 for row in VALID_RANGE :
                     for col in VALID_RANGE :
@@ -753,7 +762,7 @@ def checkers(t, size) :
         msg("Max number of moves reached, neither player wins.", "success")
             
 for i in range(runs) :
-    print("Run #" + str(i))
+    print("Run #" + str(i + 1))
     checkers(t, size)
     CB = []
 if (runs > 1) :
