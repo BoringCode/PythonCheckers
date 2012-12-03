@@ -6,7 +6,7 @@ t = cTurtle.Turtle()
 t.ht()
 t.up()
 
-runs = 100
+runs = 10
 wins = {"light": 0, "dark": 0}
 
 #Game setup
@@ -400,7 +400,6 @@ def validMove(move, player) :
             msg("A jump must be taken!", "error")
             return False
     elif move not in possibles["moves"]: #includes crowning and blocking moves
-        print(move)
         msg("Invalid move!", "error")
         return False
     return True
@@ -459,7 +458,13 @@ def importGame() :
         print("Default board set up.")
     return currentPlayer
 #The smart one
-def automatedMove(player) :
+def automatedMove(color) :
+    if (color == "white") :
+        player = 1
+    elif (color == "black") :
+        player = 3
+    else :
+        player = color
     possibles = getPossibles(CB, player)
     if player == 3 :
         opponent = 1
@@ -473,13 +478,24 @@ def automatedMove(player) :
     #Okay, I've decided on my best bet so far (jumps or moves)
     #Now I need to actually think ahead, see around corners
     #Pick some moves, more advanced!
-    i = 0
     #each move is weighted, the move(s) with the lowest weighting gets to go forward
     weighting = []
     if (debugger) :
         print("Current options -", options)
     #I only have one option, why bother checking to see if it is good?
-    if (len(options) != 1) :
+    if (len(options) > 1) :
+        #All the variables that I take into account:
+        #If I'm moving to a "safe" spot (col 0 or 7)
+        #If I'm moving to a crowning location
+        #If I'm blocking a jump
+        #Whether I could be jumped if I move to a particular spot.
+        #If I could be jumped in a multi jump if I move
+        #Am I a king? Then I don't want to be jumped if possible.
+        #If moving would remove a block and enable a jump.
+        #If moving would allow a crowning
+        #Am I a king? Try to make sure I move towards my closest opponent
+        #####
+        #What does this get me? A very defensive player that thinks carefully before moving.
         for i in range(len(options)) :
             if (debugger) :
                 print("Possible move -", options[i])
@@ -526,7 +542,6 @@ def automatedMove(player) :
             #Finished adjusting game tracker, let's get down to business
             #Get the opponent moves
             opponentPossibles = getPossibles(copyCB, opponent)
-            #print(opponentPossibles)
             if (debugger) :
                 if (len(opponentPossibles["jumps"]) > 0) :
                     print("Possible jumps -", opponentPossibles["jumps"])
@@ -558,9 +573,6 @@ def automatedMove(player) :
                                 weighting[-1] += 1
                                 if (debugger) :
                                     print("Piece is a king and could be jumped during this move, increasing weighting by 1")
-                        #remove some weighting if my current location could be jumped, this gives precedence
-                        if (toRowOp + (currRowOp - toRowOp) // 2 == getRow(moves[0][0], False)) and (toColOp + (currColOp - toColOp) // 2 == getRow(moves[0][1], False)) :
-                            weighting[-1] += -1
                         #Check to make sure I'm not removing a block
                         if (toRowOp == getRow(moves[0][0], False) and toColOp == getCol(moves[0][1], False)) :
                             #check to see if jumped piece is one of my other pieces
@@ -598,10 +610,9 @@ def automatedMove(player) :
                         #is this piece jumpable?
                         if (location[0] not in [0, 7]) and (location[1] not in [0, 7]) :
                                 rowDiff = abs(location[0] - getRow(moves[0][0], False))
-                                if (rowDiff <= abs(closest[0] - getRow(moves[0][0], False))) :
-                                    closest[0] = location[0]
                                 colDiff = abs(location[1] - getCol(moves[0][1], False))
-                                if (colDiff <= abs(closest[1] - getCol(moves[0][1], False))) :
+                                if (rowDiff <= abs(closest[0] - getRow(moves[0][0], False))) and (colDiff <= abs(closest[1] - getCol(moves[0][1], False))) :
+                                    closest[0] = location[0]
                                     closest[1] = location[1]
                     if (closest[0] > getRow(moves[0][0], False) and (getRow(moves[0][0], False) - getRow(moves[-1][0], False) > 0)) or (closest[0] < getRow(moves[0][0], False) and (getRow(moves[0][0], False) - getRow(moves[-1][0], False) < 0)) :
                         weighting[-1] += 1
@@ -614,11 +625,13 @@ def automatedMove(player) :
                                 print("Piece is moving col away from nearest piece, increasing weighting by 1")
             if (debugger) :
                 print()
+    #The final moves list, these are the "best of the best"
     final = []
     if (len(weighting) != 0) :
         if (debugger) :
             print("Weighting -", weighting)
         for i in range(len(weighting)) :
+            #Is the current value the lowest value in the list? If so append the parrell value in the options list to the final moves list
             if (weighting[i] == min(weighting)) :
                 final.append(options[i])
     else :
@@ -627,9 +640,11 @@ def automatedMove(player) :
     if (debugger) :
         print("Ideal moves -", final)
     if (len(final) > 0) :
+        #There could be more than one, but in theory they are all equal in how "good" they are. Pick one randomly
         index = random.randint(0, len(final) - 1)
         return final[index]
     else :
+        #There were no moves (unlikely, must be a bug)
         return False
 
 #The slightly smarter one
@@ -695,6 +710,12 @@ def automatedMoveSmartish(player) :
         return ideal[index]
     else :
         return False
+#Manual player
+def manual(player) :
+    move = input("Please enter a move => ")
+    while not(validMove(move, player)) :
+        move = input("Please enter a move => ")
+    return move
 #The dumb one
 def automatedMoveDumb(player) :
     possibles = getPossibles(CB, player)
@@ -707,7 +728,7 @@ def automatedMoveDumb(player) :
     index = random.randint(0, len(option) - 1)
     return option[index]
 #Where the magic happens!
-def checkers(t, size) :
+def checkers(t, size, p1, p2) :
     currentPlayer = importGame()
     if (runs < 2) :
         drawCheckerBoard(t,-4*size,4*size,size)
@@ -720,14 +741,14 @@ def checkers(t, size) :
         player = 1
         if (debugger) :
             start = time.time()
-        move = automatedMove(player)
+        move = p1(player)
         if (debugger) :
             print("Move execution:", time.time() - start)
     else :
         player = 3
         if (debugger) :
             start = time.time()
-        move = automatedMoveSmartish(player)
+        move = p2(player)
         if (debugger) :
             print("Move execution:", time.time() - start)
     moves = 0
@@ -748,7 +769,7 @@ def checkers(t, size) :
             currentPlayer = "black"
             if (debugger) :
                 start = time.time()
-            move = automatedMoveSmartish(player)
+            move = p2(player)
             if (debugger) :
                 print("Move execution:", time.time() - start)
         else :
@@ -756,7 +777,7 @@ def checkers(t, size) :
             currentPlayer = "white"
             if (debugger) :
                 start = time.time()
-            move = automatedMove(player)
+            move = p1(player)
             if (debugger) :
                 print("Move execution:", time.time() - start)
         moves += 1
@@ -765,7 +786,7 @@ def checkers(t, size) :
             
 for i in range(runs) :
     print("Run #" + str(i + 1))
-    checkers(t, size)
+    checkers(t, size, automatedMove, automatedMoveDumb)
     CB = []
 if (runs > 1) :
     print("Light player won " + str(wins["light"]) + " times.")
