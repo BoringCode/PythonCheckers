@@ -1,7 +1,11 @@
+#IMPORTANT
+#Dr. White's referee doesn't properly change players. The first move of the game will pass "gray" instead of "black".
+#His switcher will eventually pass black, like it should (he said so in class). But everywhere else gray is defined.
+#I have programmed my player to ONLY work when red or black is passed. Alternate colors will result in weirdness.
+#Please make sure his referee is passing the correct player, thanks :)
 EMPTY = 0
 INCs = [-1,1]
 VALID_RANGE = range(8)
-VERBOSE = False
 import random
 
 def getPossibles(CB,player):
@@ -57,8 +61,7 @@ def findBlocks(CB, player, playerMoves) :
                     #Hey, put it in the blocks list
                     if (playerMove not in blocks) :
                         blocks.append(playerMove)
-    return blocks
-        
+    return blocks        
 def findCrownings(CB,player,possibles):
     crownings=[]
     empties=[]
@@ -87,7 +90,6 @@ def findCrownings(CB,player,possibles):
             if jump[-2:]in empties and jump[0:2] in singleCheckerPositions:
                 crownings.append(jump)
     return crownings
-
 def findMoves(CB,player,playerTokens,opponentTokens,rowInc):
     moves=[]
     #process all board positions    
@@ -109,7 +111,6 @@ def findMoves(CB,player,playerTokens,opponentTokens,rowInc):
                                     moves.append(chr(row+65)+str(col)+":"+chr(toRow+65)+str(toCol))
                        
     return moves
-
 def findJumps(CB,player,playerTokens,opponentTokens,rowInc):
     jumps=[]
     for row in range(8):
@@ -137,7 +138,6 @@ def findJumps(CB,player,playerTokens,opponentTokens,rowInc):
                             and CB[jumprow][jumpcol] in opponentTokens and CB[torow][tocol]==EMPTY:
                                 jumps.append(jump+chr(torow+65)+str(tocol))
     return jumps
-
 def expandJumps(CB,player,oldJumps,playerTokens,opponentTokens,rowInc):
     newJumps=[]
     for oldJump in oldJumps:
@@ -170,13 +170,12 @@ def expandJumps(CB,player,oldJumps,playerTokens,opponentTokens,rowInc):
                         newJumps.append(oldJump+":"+chr(torow+65)+str(tocol))
                         if oldJump in newJumps:
                             newJumps.remove(oldJump)
-    return newJumps          
-
+    return newJumps   
 #The smart one
 def automatedMove(CB, player) :
-    if (VERBOSE) :
-        print()
     possibles = getPossibles(CB, player)
+    #player piece count
+    count = 0
     if player == "black" :
         opponent = "red"
         piece = 3
@@ -196,8 +195,6 @@ def automatedMove(CB, player) :
     #Pick some moves, more advanced!
     #each move is weighted, the move(s) with the lowest weighting gets to go forward
     weighting = []
-    if (VERBOSE) :
-        print("Current options -", options)
     #I only have one option, why bother checking to see if it is good?
     if (len(options) > 1) :
         #All the variables that I take into account:
@@ -212,30 +209,30 @@ def automatedMove(CB, player) :
         #Am I a king? Try to make sure I move towards my closest opponent
         #Is it a long multi-jump?
         #Whether I'm moving towards the nearest piece, this becomes more important towards the end of the game.
-        #####
+        #Trapping the other player into jumping me so I can jump him. Prefer trapping into multiple jumps.
         #What does this get me? A very defensive player that thinks carefully before moving.
+        #################
+        #Get locations of enemy pieces, also count how many pieces I have.
+        locations = []
+        for row in VALID_RANGE :
+            for col in VALID_RANGE :
+                if (CB[row][col] in [opPiece, opPiece + 1]) :
+                    locations.append([row, col])
+                elif (CB[row][col] != EMPTY) :
+                    count += 1
         for i in range(len(options)) :
-            if (VERBOSE) :
-                print("Possible move -", options[i])
             weighting.append(0)
             #is the move a crowning or a block?
             if options[i] in possibles["crownings"] :
                 weighting[-1] += -2
-                if (VERBOSE) :
-                    print("Moving would result in a crowning, decreasing weighting by 1")
             if (options[i] in possibles["blocks"]) :
-                #Just a note, Dr. White's code doesn't appear to catch all blocks. Might want to fix that.
                 weighting[-1] += -3
-                if (VERBOSE) :
-                    print("Moving would result in a block, decreasing weighting by 2")
             #Multi jumps
             if (len(options[i]) > 5) :
                 weighting[-1] += -1
                 #The longest multi-jump?
                 if (len(options[i]) > len(longestJump)) :
                     longestJump = options[i]
-                if (VERBOSE) :
-                    print("Multi jump, decreasing weighting by 1")
             #Before I go further, I'd like to check the current state of the board.
             if (options[i] not in possibles["blocks"]) :
                 opponentPossibles = getPossibles(CB, opponent)
@@ -246,9 +243,8 @@ def automatedMove(CB, player) :
                     for move in range(len(movesOp)) :
                         toRowOp = ord(movesOp[move][0]) - 65
                         toColOp = int(movesOp[move][1])
+                        #This move could possibly move me out of a jump position
                         if (toRowOp + (currRowOp - toRowOp) // 2 == ord(options[i][0]) - 65) and (toColOp + (currColOp - toColOp) // 2 == int(options[i][1])) :
-                            if (VERBOSE) :
-                                print("I'm in a jumpable location, decreasing weighting by 3")
                             weighting[-1] += -3
                         currRowOp = toRowOp
                         currColOp = toColOp
@@ -275,15 +271,9 @@ def automatedMove(CB, player) :
             #If I'm moving to a "safe" spot, prefer it
             if (currCol in [0, 7]) :
                 weighting[-1] += -2
-                if (VERBOSE) :
-                    print("Moving would move to a safe spot, decreasing weighting by 2")
-            #Check my future moves
             #Finished adjusting game tracker, let's get down to business
-            #Get the opponent moves
+            #Get the opponent moves AFTER I have made my move
             opponentPossibles = getPossibles(copyCB, opponent)
-            if (VERBOSE) :
-                if (len(opponentPossibles["jumps"]) > 0) :
-                    print("Possible jumps -", opponentPossibles["jumps"])
             #This is to make sure two possible jumps on the same location don't trigger as a worse move
             #than one possible jump on one location
             singleJump = False
@@ -293,14 +283,10 @@ def automatedMove(CB, player) :
                 #If my jump is better then his, leave my jump in.
                 if (len(options[i]) > len(jump)) :
                     weighting[-1] += -3
-                    if (VERBOSE) :
-                        print("My jump is a better multiple jump, decreasing weighting by 3")
                 else :
                     #Check if jump could result in a crowning
                     if (jump in opponentPossibles["crownings"]) :
                         weighting[-1] += 2
-                        if (VERBOSE) :
-                            print("Moving would allow an opponent crowning, increasing weighting by 2")
                     movesOp = jump.split(":")
                     currRowOp = ord(movesOp[0][0]) - 65
                     currColOp = int(movesOp[0][1])
@@ -317,108 +303,89 @@ def automatedMove(CB, player) :
                             if not(singleJump) :
                                 weighting[-1] += 3
                                 singleJump = True
-                                if (VERBOSE) :
-                                    print("Moving would allow a jump, increasing weighting by 3")
                             #multi jump, weight it even higher because I would prefer a different move
                             if (len(jump) > 5) and not(multiJump) :
                                 weighting[-1] += 2
                                 multiJump = True
-                                if (VERBOSE) :
-                                    print("Moving would allow a multi jump, increasing weighting by 2")
                             #king, I would prefer this not be jumped
                             if (currSquare in [2, 4]) and (not(multiJump) or not(singleJump)) :
                                 weighting[-1] += 1
-                                if (VERBOSE) :
-                                    print("Piece is a king and could be jumped during this move, increasing weighting by 1")
                         #Check to make sure I'm not removing a block
                         if (toRowOp == ord(moves[0][0]) - 65 and toColOp == int(moves[0][1])) :
                             #check to see if jumped piece is one of my other pieces
                             if (toRowOp + (currRowOp - toRowOp) // 2 != toRow) or (toColOp + (currColOp - toColOp) // 2 != toCol) :
                                 weighting[-1] += 3
-                                if (VERBOSE) :
-                                    print("Piece is blocking a jump, increasing weighting by 3")
                                 #multi jump, weight it even higher because I would prefer a different move
                                 if (len(jump) > 5) :
-                                    weighting[-1] += 2
-                                    if (VERBOSE) :
-                                        print("Removing this block would allow a multi jump, increasing weighting by 2")
-                        #Trap
-                        #The only reason I limit it to one jump is I would prefer to be certain that he will take this move
-                        if (singleJump == True or multiJump == True) :
-                            possiblesFuture = getPossibles(jumpCB, player)
-                            for futureJump in possiblesFuture["jumps"] :
-                                if (len(futureJump) > len(jump)) :
-                                    weighting[-1] += -5
-                                    if (VERBOSE) :
-                                        print("I could possibly do this in the future: ", futureJump, "decreasing weighting by 5")                            
+                                    weighting[-1] += 2                           
                         currRowOp = toRowOp
                         currColOp = toColOp
+                    #Trap
+                    #The only reason I limit it to one jump is I would prefer to be certain that he will take this move
+                    #I also don't want to take this if there is a block, I don't want a king to be jumped                
+                    if (len(opponentPossibles["jumps"]) == 1 and (options[i] in possibles["blocks"] or len(possibles["blocks"]) == 0) and (origSquare != piece + 1 or jumpSquare == opPiece + 1)) :
+                        countAfterJump = 0
+                        for row in VALID_RANGE :
+                            for col in VALID_RANGE :
+                                if (jumpCB[row][col] in [piece, piece + 1]) :
+                                    countAfterJump += 1
+                        #Don't bother checking if there would be no pieces left after I get jumped
+                        if (countAfterJump > 0) :
+                            possiblesFuture = getPossibles(jumpCB, player)
+                            for futureJump in possiblesFuture["jumps"] :
+                                if (len(futureJump) > len(jump)) or (count > len(locations) and (countAfterJump > len(locations) - 1)) :
+                                    weighting[-1] += -4
+                                    #Multijump, compensate more
+                                    if (len(jump) > 5) :
+                                        weighting[-1] += -1
             #check if moving would allow a crowning
-            if (VERBOSE) :
-                if (len(opponentPossibles["crownings"]) > 0) :
-                    print("Possible crownings -", opponentPossibles["crownings"])
             for crown in opponentPossibles["crownings"] :
                 if (crown.find(moves[0][0] + moves[0][1]) != -1) :
                     weighting[-1] += 2
-                    if (VERBOSE) :
-                        print("Moving would allow an opponent crowning, increasing weighting by 2")
             #Basic path finding, move in direction of nearest piece
             if (options[i] in possibles["moves"] and options[i] not in possibles["blocks"] and origSquare == piece + 1) :
-                locations = []
-                for row in VALID_RANGE :
-                    for col in VALID_RANGE :
-                        if (CB[row][col] in [opPiece, opPiece + 1]) :
-                            locations.append([row, col])
                 if (len(locations) > 0) :
                     closest = [locations[0][0], locations[0][1]]
                     #get the closest piece
                     for location in locations :
-                        #is this piece jumpable?
-                        if (location[0] not in [0, 7]) and (location[1] not in [0, 7]) :
+                        #is this piece jumpable? Only move towards jumpable pieces
+                        if ((location[0] not in [0, 7]) and (location[1] not in [0, 7]) or len(locations) < 2) :
                                 rowDiff = abs(location[0] - (ord(moves[0][0]) - 65))
                                 colDiff = abs(location[1] - int(moves[0][1]))
                                 if (rowDiff <= abs(closest[0] - (ord(moves[0][0]) - 65))) and (colDiff <= abs(closest[1] - int(moves[0][1]))) :
                                     closest[0] = location[0]
                                     closest[1] = location[1]
+                    #Detect moving a row away from nearest piece
                     if (closest[0] > ord(moves[0][0]) - 65 and ((ord(moves[0][0]) - 65) - (ord(moves[-1][0]) - 65) > 0)) or (closest[0] < (ord(moves[0][0]) - 65) and ((ord(moves[0][0]) - 65) - (ord(moves[-1][0]) - 65) < 0)) :
                         weighting[-1] += 1
-                        if (VERBOSE) :
-                            print("Piece is moving row away from nearest piece, increasing weighting by 1")
-                        #Detect moving a column
+                        #Detect moving a column away from nearest piece
                         if (closest[1] >= int(moves[-1][1]) and (int(moves[0][1]) - int(moves[-1][1]) > 0)) or (closest[1] >= int(moves[-1][1]) and (int(moves[0][1]) - int(moves[-1][1]) < 0)) :
                             weighting[-1] += 1
-                            if (VERBOSE) :
-                                print("Piece is moving col away from nearest piece, increasing weighting by 1")
-            #Check how I could move in the future.
+            #Check how I could move in the future if I made this move.
             possiblesFuture = getPossibles(copyCB, player)
-            #I can't move anymore? Don't move into a losing situations situation
+            #I can't move anymore? Don't move into a losing situations
             if (len(possiblesFuture["moves"]) == 0 and len(possiblesFuture["jumps"]) == 0) :
                 weighting[-1] += 2
-                if (VERBOSE) :
-                    print("I'm moving into a losing situation, increasing weighting by 2")
-            if (VERBOSE) :
-                print()
+            #Moving would allow some jumps in the future! YEAH!
+            if (len(possiblesFuture["jumps"]) > 0) :
+                weighting[-1] += -1
+            #Moving would allow a crowning in future!
+            if (len(possiblesFuture["crownings"]) > 0) :
+                weighting[-1] += -1
     #It's a long jump!
     if (len(possibles["jumps"]) > 0 and len(weighting) != 0) :
         if (len(longestJump) > 8) :
-            if (VERBOSE) :
-                print(longestJump, "is obviously the best jump. Decreasing weighting by 1.")
             weighting[options.index(longestJump)] += -1
     #The final moves list, these are the "best of the best"
     final = []
     if (len(weighting) != 0) :
-        if (VERBOSE) :
-            print("Weighting -", weighting)
         for i in range(len(weighting)) :
             #Is the current value the lowest value in the list? If so append the parrell value in the options list to the final moves list
             if (weighting[i] == min(weighting)) :
                 final.append(options[i])
     else :
         final = options
-    #random for now
-    if (VERBOSE) :
-        print("Ideal moves -", final)
-        input("Press enter to continue...")
+    #Pick a random move out of the best possible moves
     if (len(final) > 0) :
         #There could be more than one, but in theory they are all equal in how "good" they are. Pick one randomly
         index = random.randint(0, len(final) - 1)
