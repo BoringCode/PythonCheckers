@@ -1,13 +1,7 @@
-#IMPORTANT
-#Dr. White's referee doesn't properly change players. The first move of the game will pass "gray" instead of "black".
-#His switcher will eventually pass black, like it should (he said so in class). But everywhere else gray is defined.
-#I have programmed my player to ONLY work when red or black is passed. Alternate colors will result in weirdness.
-#Please make sure his referee is passing the correct player, thanks :)
 EMPTY = 0
 INCs = [-1,1]
 VALID_RANGE = range(8)
 import random
-
 def getPossibles(CB,player):
     possibles={}
     if player=="black":
@@ -268,8 +262,8 @@ def automatedMove(CB, player) :
                 copyCB[toRow][toCol] = currSquare
                 currRow = toRow
                 currCol = toCol
-            #If I'm moving to a "safe" spot, prefer it
-            if (currCol in [0, 7]) :
+            #If I'm moving to a "safe" spot, prefer it. Only prefer it if it is still early in the game.
+            if (currCol in [0, 7] and not(count + len(locations) <= 13 and count >= len(locations))) :
                 weighting[-1] += -2
             #Finished adjusting game tracker, let's get down to business
             #Get the opponent moves AFTER I have made my move
@@ -278,6 +272,7 @@ def automatedMove(CB, player) :
             #than one possible jump on one location
             singleJump = False
             multiJump = False
+            trap = False
             for jump in opponentPossibles["jumps"] :
                 jumpCB = copyList(copyCB)
                 #If my jump is better then his, leave my jump in.
@@ -338,6 +333,7 @@ def automatedMove(CB, player) :
                                     #Multijump, compensate more
                                     if (len(jump) > 5) :
                                         weighting[-1] += -1
+                                    trap = True
             #check if moving would allow a crowning
             for crown in opponentPossibles["crownings"] :
                 if (crown.find(moves[0][0] + moves[0][1]) != -1) :
@@ -367,7 +363,7 @@ def automatedMove(CB, player) :
             if (len(possiblesFuture["moves"]) == 0 and len(possiblesFuture["jumps"]) == 0) :
                 weighting[-1] += 2
             #Moving would allow some jumps in the future! YEAH!
-            if (len(possiblesFuture["jumps"]) > 0) :
+            if (len(possiblesFuture["jumps"]) > 0 and weighting[-1] <= 0 and not(trap)) :
                 weighting[-1] += -1
             #Moving would allow a crowning in future!
             if (len(possiblesFuture["crownings"]) > 0) :
@@ -385,13 +381,9 @@ def automatedMove(CB, player) :
                 final.append(options[i])
     else :
         final = options
-    #Pick a random move out of the best possible moves
-    if (len(final) > 0) :
-        #There could be more than one, but in theory they are all equal in how "good" they are. Pick one randomly
-        index = random.randint(0, len(final) - 1)
-        return final[index]
-    #There were no moves (unlikely, must be a bug)
-    return False    
+    #There could be more than one, but in theory they are all equal in how "good" they are. Pick one randomly
+    index = random.randint(0, len(final) - 1)
+    return final[index]
 #make a complete copy of a list, including internal lists
 def copyList(inList):
     if isinstance(inList, list):
