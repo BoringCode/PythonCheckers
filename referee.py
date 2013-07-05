@@ -1,16 +1,18 @@
+#This code was written by Dr. White with some modifications by me (Bradley Rosenfeld)
 import cTurtle
 import time
 import math
 import random
 import imp
-import P1
-import P2
+import mainPlayer
+import opponent
 
 EMPTY=0
 INCs=[-1,1]
 VALID_RANGE=range(8)
 DEBUG=False
 VISIBLE=True
+sleepTime = 0.1
 
 def drawCircleCentered(t,radius):
     pos=t.position()
@@ -110,10 +112,10 @@ def labelBoard(t,size):
         t.write("ROW " + chr(65+i),font=("Arial",12,"bold"))
         t.up()
         t.goto(-(5.2*size),((4*size)+(i*-size)-(1.7*size)))
-        t.down()   
+        t.down()
 
 def fillCheckerBoard(t,size,CB):
-    t.tracer(False)  
+    t.tracer(False)
     drawCheckerBoard(t,-240,240,size)
     labelBoard(t,size)
     for row in range(8):
@@ -143,7 +145,7 @@ def validMove(CB,move,player):
         print ("Invalid move!!!!")
         return False
     else:
-        return True 
+        return True
 
 def getPossibles(CB,player):
     possibles={}
@@ -155,7 +157,7 @@ def getPossibles(CB,player):
         playerTokens=[1,2]
         opponentTokens=[3,4]
         rowInc=1
-    possibles["moves"]=findMoves(CB,player,playerTokens,opponentTokens,rowInc)  #puts moves right into possibles D      
+    possibles["moves"]=findMoves(CB,player,playerTokens,opponentTokens,rowInc)  #puts moves right into possibles D
     oldJumps=findJumps(CB,player,playerTokens,opponentTokens,rowInc)
     newJumps=expandJumps(CB,player,oldJumps,playerTokens,opponentTokens,rowInc)
     while newJumps != oldJumps:
@@ -176,7 +178,7 @@ def findCrownings(CB,player,possibles):
         for row in range(8):
             for col in range(8):
                 if CB[row][col]==3:
-                    singleCheckerPositions.append(chr(row+65)+str(col))                
+                    singleCheckerPositions.append(chr(row+65)+str(col))
     else:
         for col in range(0,8,2):
             if CB[7][col]==EMPTY:
@@ -196,7 +198,7 @@ def findCrownings(CB,player,possibles):
 
 def findMoves(CB,player,playerTokens,opponentTokens,rowInc):
     moves=[]
-    #process all board positions    
+    #process all board positions
     for row in range(8):
         for col in range(8):
             if CB[row][col] in playerTokens:
@@ -213,7 +215,7 @@ def findMoves(CB,player,playerTokens,opponentTokens,rowInc):
                             toCol=col+colInc
                             if toRow in VALID_RANGE and toCol in VALID_RANGE and CB[toRow][toCol]==EMPTY:
                                     moves.append(chr(row+65)+str(col)+":"+chr(toRow+65)+str(toCol))
-                       
+
     return moves
 
 def findJumps(CB,player,playerTokens,opponentTokens,rowInc):
@@ -276,11 +278,11 @@ def expandJumps(CB,player,oldJumps,playerTokens,opponentTokens,rowInc):
                         newJumps.append(oldJump+":"+chr(torow+65)+str(tocol))
                         if oldJump in newJumps:
                             newJumps.remove(oldJump)
-    return newJumps          
-            
+    return newJumps
+
 def makeMove(t,CB,move,player,size,possibles):
     if VISIBLE:
-        t.tracer(False)  
+        t.tracer(False)
     if move in possibles["crownings"]:
         row=ord(move[0])-65
         col=int(move[1])
@@ -299,7 +301,7 @@ def makeMove(t,CB,move,player,size,possibles):
             drawSquare(t,x,y,size,"black")
         #change the logical board
         temp=CB[fromRow][fromCol]
-        CB[fromRow][fromCol]=0                         
+        CB[fromRow][fromCol]=0
         CB[toRow][toCol]=temp
         #is this a king?
         king=False
@@ -353,7 +355,7 @@ def readCheckerFile(CB):
             return "black"
         else:
             return "red"
-    
+
 def writeGameState(CB,player):
     fileName=input("Enter a file name to save the game (prefix and .txt) => ")
     if fileName!="":
@@ -398,7 +400,7 @@ def win(CB,numChecks):
         else:
             numChecks[2]=0
             numChecks[i]=count
-          
+
         count=0
         possibles=getPossibles(CB,player)
         for key in possibles:
@@ -438,13 +440,13 @@ def labelGameStats(t,size,PlayerB,PlayerR,Bwin,Rwin,total):
     t.down()
     t.write(PlayerB + "  " + str(Bwin) + "/" + str(total),font=("Arial",12,"bold"))
     t.tracer(True)
-    
 
-            
+
+
 def checkers(CB,bob,PlayerB,PlayerR,Bwin,Rwin,totalPlayed):
     #junk=input("Hey hey hey")
-    imp.reload(P1)
-    imp.reload(P2)
+    imp.reload(mainPlayer)
+    imp.reload(opponent)
     player=readCheckerFile(CB)
     print(player, "goes first")
     SIZE=60
@@ -457,30 +459,30 @@ def checkers(CB,bob,PlayerB,PlayerR,Bwin,Rwin,totalPlayed):
         possibles=getPossibles(CB,player)
         if player=="red":
             oppPlayer="black"
-            move=P2.automatedMove(CB,player)
+            move=opponent.automatedMove(CB,player)
         else:
             oppPlayer="red"
-            move=P1.automatedMove(CB,player)
+            move=mainPlayer.automatedMove(CB,player)
         countBadMoves=1
         #Until a valid move or exceeds allowed number of bad move trys
         while ((move!="exit") and (not (validMove(CB,move,player)))) and (countBadMoves!=3):
             countBadMoves+=1
             if player=="red":
                 oppPlayer="black"
-                move=P2.automatedMove(CB,player)
+                move=opponent.automatedMove(CB,player)
             else:
                 oppPlayer="red"
-                move=P1.automatedMove(CB,player)
+                move=mainPlayer.automatedMove(CB,player)
         #terminate due to bad moves or exit entered (and save state)
         if countBadMoves==3 or move=="exit":
             if countBadMoves==3:
                 print("Game terminated because player ", player, " refused to make a valid move!")
             else:
                 writeGameState(CB,player)
-            return oppPlayer   
+            return oppPlayer
         #All good - make move!
         makeMove(bob,CB,move,player,SIZE,possibles)
-        time.sleep(0.4)
+        time.sleep(sleepTime)
         #showBoard(CB)
         player=switchPlayers(player)
     return win(CB,numChecks)[1]
@@ -523,7 +525,7 @@ def tourney(PlayerB,PlayerR):
         else:
             i-=1
         i+=1
-            
+
         #sys.stdout.write(".")
         score+=rateBoard(CB)[0]
         print()
