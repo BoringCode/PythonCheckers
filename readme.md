@@ -1,10 +1,7 @@
-#Python Checkers Game
-This respository will store the big project for this semester. 
+#Python Checkers
 
-I can handle a simple game between two manual players. 
+I created this as a project for COS 120 in Fall 2012 at Taylor University.
 
-Support for jumps, multiple jumps, and validation of moves is available.
+The basic requirements were to create an automated player with limited AI who could only look 2.5 moves into the future. Sounds like fun right?
 
-Simple notation for defining moves is: A2:B3. Or multiple jumps: A2:C4:E2
-
-##More to come...
+I heavily commented mainPlayer.py to give some insight into the thought process behind the player.
