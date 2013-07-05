@@ -1,6 +1,6 @@
 #Python Checkers
 
-I created this as a project for COS 120 in Fall 2012 at Taylor University.
+I created this as a project for COS 120 in Fall 2012 at [Taylor University](http://taylor.edu).
 
 The basic requirements were to create an automated player with limited AI who could only look 2.5 moves into the future. Sounds like fun right?
 
