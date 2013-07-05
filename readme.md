@@ -6,4 +6,4 @@ The basic requirements were to create an automated player with limited AI who co
 
 I heavily commented mainPlayer.py to give some insight into the thought process behind the player.
 
-**Everything but referee.py was created by me, feel free to take a look around the code**
+*Everything but referee.py was created by me, feel free to take a look around the code*
