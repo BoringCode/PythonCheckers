@@ -1,5 +1,5 @@
 #This code was written by Dr. White with some modifications by me (Bradley Rosenfeld)
-import cTurtle
+import turtle
 import time
 import math
 import random
@@ -12,7 +12,7 @@ INCs=[-1,1]
 VALID_RANGE=range(8)
 DEBUG=False
 VISIBLE=True
-sleepTime = 0.1
+sleepTime = 0.5
 
 def drawCircleCentered(t,radius):
     pos=t.position()
@@ -505,7 +505,7 @@ def rateBoard(CB):
     return ([Bscore,Rscore])
 
 def tourney(PlayerB,PlayerR):
-    bob=cTurtle.Turtle()
+    bob= turtle.Turtle()
     Rwin=0
     Bwin=0
     iters=51
