@@ -1,4 +1,4 @@
-#Python Checkers
+# Python Checkers
 
 I created this as a project for COS 120 in Fall 2012 at [Taylor University](http://taylor.edu).
 
